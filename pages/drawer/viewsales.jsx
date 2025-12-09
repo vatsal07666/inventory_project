@@ -310,7 +310,7 @@ import { FaFileInvoice } from "react-icons/fa6";
 const ViewSales = () => {
   const { sales } = useGlobal();
 
-  const companyNumber = "9087563421"
+  const companyNumber = "9876504567"
   const companyEmail = "info@company.com" 
 
   const [billOpen, setBillOpen] = useState(false);
