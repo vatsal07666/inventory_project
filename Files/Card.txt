@@ -1,0 +1,97 @@
+Card.jsx :- 
+	import './App.css';
+
+	const Card = (props) => {
+  		return (
+  			<div className="card">
+      				<img src={props.image} alt={props.title} className="card-image" />
+      				<div className="card-content">
+        					<h1 className="card-title">{props.title}</h1>
+        					<p className="card-description">{props.description}</p>
+
+        					<h2 className="card-loc">{props.loc}</h2>
+        					<p className="card-location">{props.location}</p>
+        
+        					<h2 className="card-seen">{props.seen}</h2>
+        					<p className="card-first_seen">{props.first_seen}</p>
+      				</div>
+    			</div>
+  		);
+	};
+
+	export default Card;
+
+
+App.css :- 
+	
+	.card-container {
+  		display: flex;
+  		flex-wrap: wrap;
+  		gap: 20px;
+  		justify-content: center;
+  		background-color: rgb(39, 43, 51);
+  		padding: 50px 0px;
+	}
+
+	.card {
+  		display: flex;
+  		width: 600px;
+  		border-radius: 15px;
+  		overflow: hidden;
+  		margin: 10px;
+  		background-color: rgb(59, 59, 65);
+	}
+
+	.card-image {
+  		width: 40%;
+  		object-fit: cover;
+	}
+
+	.card-content {
+		color: white;
+  		padding: 16px;
+	}
+
+	.card-title, .card-loc, .card-seen {
+  		margin: 0;
+  		font-size: 1.5rem;
+	}
+
+	.card-loc, .card-seen{
+  		color: gray;
+  		font-size: 16px;
+	}
+
+	.card-description, .card-location, .card-first_seen {
+  		margin-top: 8px;
+  		font-size: 1rem;
+	}
+
+
+App.js :-
+	import Card from './Card';
+	import jerry from './images/jerry.jpeg';
+	import robot from './images/Robot.jpeg';
+	import pripudlian from './images/pripudlian.jpeg';
+	import revolio from './images/revolio.jpeg';
+	import './App.css';
+
+	function App() {
+		return (
+      			<div className="card-container">
+        				<Card image={jerry} title="Diablo Verde" description="Dead - Mythological Creature" loc="Last Known Location:" 
+            					location="Anatomy Park" seen="First Place Seen In:" first_seen="Anatomy Park"/>
+
+        				<Card image={robot} title="Robot Rick" description="Unknown - Robot" loc="Last Known Location:" 
+            					location="Citadel Of Ricks" seen="First Place Seen In:" first_seen="Close Rick - Counters Of The Rick Kind"/>
+
+        				<Card image={pripudlian} title="Pripudlian" description="Alive - Alien" loc="Last Known Location:" 
+           					location="Earth (Replacement Dimension)" seen="First Place Seen In:" first_seen="Pilot"/>
+
+        				<Card image={revolio} title="Revolio Clockerg Jr." description="Dead - Alien" loc="Last Known Location:" 
+            					location="Earth (Fascist Dimension)" seen="First Place Seen In:" first_seen="Edge Of Tomorty - Rick, Die, Rickpeat"/>
+      			</div>
+  		);
+	}
+
+	export default App;

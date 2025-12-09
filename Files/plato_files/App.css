@@ -1,0 +1,19 @@
+* {
+  scroll-behavior: smooth;
+}
+
+.client-slider .slick-dots li button:before {
+  font-size: 14px;
+  color: rgb(146, 146, 146);
+}
+.client-slider .slick-dots li.slick-active button:before {
+  color: #4EB478;
+}
+
+.slider .slick-dots li button:before {
+  color: rgba(255, 255, 255, 1);
+  font-size: 14px;
+}
+.slider .slick-dots li.slick-active button:before {
+  color: white; 
+}
