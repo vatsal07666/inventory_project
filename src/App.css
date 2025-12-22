@@ -1,38 +1,168 @@
-.App {
-  text-align: center;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Login CSS */
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fa;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.login-box {
+  width: 350px;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+}
+
+.login-box h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.login-box label {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.login-box input {
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.login-box button {
+  margin-top: 20px;
+  padding: 12px;
+  background: #0f172a;
   color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s ease;
 }
 
-.App-link {
-  color: #61dafb;
+.login-box button:hover {
+  background: #252729;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Register CSS */
+.signup-text {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.signup-button {
+  color: #4a72fa;
+  text-decoration: none;
+  transition: 0.2s ease-in-out;
+}
+
+.signup-button:hover{
+  background-color: #0f172a;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  margin-left: 3px;
+}
+
+
+.signup-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fa;
+  font-family: Arial, sans-serif;
+}
+
+.signup-box {
+  width: 350px;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.signup-box h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.signup-box label {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.signup-box input {
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.signup-box button {
+  margin-top: 20px;
+  padding: 12px;
+  background: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s ease;
+}
+
+.signup-box button:hover {
+  background: #252729;
+}
+
+.login-text {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.login-button {
+  padding: 0;
+  margin-left: 5px;
+  color: #4a72fa;
+  text-decoration: none;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+
+.login-button:hover{
+  background-color: #0f172a;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  margin-left: 3px;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #invoice, #invoice * {
+        visibility: visible;
+    }
+    #invoice {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
 }
