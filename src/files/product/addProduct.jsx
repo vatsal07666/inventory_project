@@ -212,7 +212,9 @@ const AddProduct = () => {
                     <Table>
                         <TableHead
                             sx={{ background: "#1e293b",
-                                "& .MuiTableCell-root": { color: "#fff", fontSize: "16px" }
+                                "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", 
+                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+                                }
                             }}
                         >
                             <TableRow>
@@ -231,7 +233,8 @@ const AddProduct = () => {
                             sx={{
                                 background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
                                 "& .MuiTableCell-root": { color: "#000", fontSize: "15px",
-                                    borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5
+                                    borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5,
+                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)"
                                 }
                             }}
                         >
