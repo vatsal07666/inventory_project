@@ -53,7 +53,7 @@ const CreateAccount = () => {
 
                         <p className="login-text">
                             Already have an account?
-                            <Link to="/login" className="login-button">Log in</Link>
+                            <Link to="/" className="login-button">Log in</Link>
                         </p>
                     </Form>
                 )}
