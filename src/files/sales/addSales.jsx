@@ -396,7 +396,9 @@ const AddSales = () => {
                 <TableContainer>
                     <Table>
                         <TableHead sx={{ background: "#1e293b",
-                                "& .MuiTableCell-root": { color: "#fff", fontSize: "15px" }
+                                "& .MuiTableCell-root": { color: "#fff", fontSize: "15px", 
+                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+                                }
                             }}
                         >
                             <TableRow>
@@ -415,7 +417,8 @@ const AddSales = () => {
                         <TableBody
                             sx={{ background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
                                 "& .MuiTableCell-root": { color: "#000000ff", fontSize: "15px",
-                                    borderBottom: "1px solid rgba(0, 0, 0, 0.2)",
+                                    borderBottom: "1px solid rgba(0, 0, 0, 0.2)", letterSpacing: 0.5,
+                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)"
                                 }
                             }}
                         >
