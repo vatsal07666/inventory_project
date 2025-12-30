@@ -1,26 +1,30 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Table, TableHead,
-    TableRow, TableCell, TableBody, Paper, TableContainer, Box, IconButton, Tooltip
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Table, 
+    TableHead, TableRow, TableCell, TableBody, Paper, TableContainer, Box, IconButton,
+    Tooltip, 
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { FaEdit } from "react-icons/fa";
-import { RiDeleteBin6Line } from "react-icons/ri";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { addProduct, deleteProduct, resetDeleteState, resetUIState, setDeleteIndex, setDeleteOpen, 
-    setEditIndex, setOpen, updateProduct } from "./productSlice";
+import { addProduct, deleteProduct, resetDeleteState, resetUIState, setDeleteId, 
+    setDeleteOpen, setEditId, setOpen, setProducts, updateProduct,
+} from "./productSlice";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
+import { useCallback, useEffect } from "react";
+import { RiDeleteBin6Line } from "react-icons/ri";
+import { FaEdit } from "react-icons/fa";
 
 const AddProduct = () => {
-    const { list: products, open, editIndex, deleteOpen, deleteIndex } = useSelector((state) => state.product);
+    const { list: products = [], open, deleteOpen, deleteId, editId } = useSelector((state) => state.product);
     const dispatch = useDispatch();
-
+    
     const categories = ["Electronics", "Home Appliances", "Fashion", "Sports"];
     const suppliers = ["Global Electronics Ltd", "Home Supply", "Fashion World Inc", "SportsPro Equipment"];
 
-    const initialValues = { product: "", sku: "", category: "", supplier: "", stock: "", costprice: "", sellingprice: "", };
+    const initialValues = { productname: "", sku: "", category: "", supplier: "", stock: "", costprice: "", sellingprice: "", };
 
     const validationSchema = Yup.object({
-        product: Yup.string().required("Product is required*"),
+        productname: Yup.string().required("Product is required*"),
         sku: Yup.string().required("SKU is required*"),
         category: Yup.string().required("Category is required*"),
         supplier: Yup.string().required("Supplier is required*"),
@@ -29,46 +33,99 @@ const AddProduct = () => {
         sellingprice: Yup.number().typeError("Selling Price must be a number*").required("Selling Price is required*"),
     });
 
+    const token = "sqqVgyC2NtNy2hR6";
+    const headers = { Authorization: token, "Content-Type": "application/json" };
+
+    // ---------- GET ----------
+    const fetchProducts = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/product", { 
+            headers: { Authorization: token, "Content-Type": "application/json" }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setProducts(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
+
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts])
+
+    // ---------- Submit ----------
     const handleSubmit = (values, { resetForm }) => {
+        if (document.activeElement) document.activeElement.blur();
+
         const productData = { 
-            ...values, 
-            stock: Number(values.stock), price: Number(values.price), quantity: Number(values.quantity) 
+            productname: values.productname,
+            sku: values.sku,
+            category: values.category,
+            supplier: values.supplier, 
+            stock: Number(values.stock), 
+            costprice: Number(values.costprice), 
+            sellingprice: Number(values.sellingprice) 
         };
-
-        if (editIndex !== null) {
-            dispatch(updateProduct({ index: editIndex, product: productData }));
+        
+        // ---------- PATCH ----------
+        if(editId !== null) {
+            axios.patch( `https://generateapi.techsnack.online/api/product/${editId}`, 
+                productData, { headers } 
+            )
+            .then((patchRes) => {
+                console.log("PATCH response:", patchRes.data);
+                dispatch(updateProduct(patchRes.data.Data));
+                resetForm()
+                dispatch(resetUIState())
+                fetchProducts()
+            })
+            .catch((err) => {
+                console.error("PATCH error:", err);
+            })
         } else {
-            dispatch(addProduct(productData));
+            // ---------- POST ---------
+            axios.post( "https://generateapi.techsnack.online/api/product", productData, 
+                {headers} 
+            )
+            .then((postRes) => {
+                console.log("POST response: ", postRes.data);
+                dispatch(addProduct(postRes.data.Data));
+                resetForm();
+                dispatch(resetUIState());
+                fetchProducts();
+            })
+            .catch((err) => {
+                console.error("ADD error:", err);
+            });
         }
-
-        resetForm();
-        dispatch(resetUIState())
     };
-
-    const handleEdit = (index) => { 
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setEditIndex(index));
-        dispatch(setOpen(true))
-    };
-
-    const handleDelete = (index) => {
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setDeleteIndex(index));
-        dispatch(setDeleteOpen(true))
-    };
-
-
+ 
+    // ---------- DELETE ----------
     const confirmDelete = () => {
-        dispatch(deleteProduct(deleteIndex));
-        dispatch(resetDeleteState())
+        if (document.activeElement) document.activeElement.blur();
+        axios.delete( `https://generateapi.techsnack.online/api/product/${deleteId}`, 
+            { headers } 
+        )
+        .then((delRes) => {
+            dispatch(deleteProduct(deleteId));
+            dispatch(resetDeleteState());
+            console.log("Delete Product Successfully....", delRes.status);
+            fetchProducts();
+        })
+        .catch((err) => {
+            console.log("DELETE error:", err)
+        })
     }
-    
+
     const handleOpenDialog = () => { 
         if (document.activeElement) document.activeElement.blur();
         dispatch(setOpen(true)) 
     };
 
-    return (
+    const editProduct = products.find(item => item._id === editId);
+    
+    return(
         <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2>Products</h2>
@@ -85,14 +142,14 @@ const AddProduct = () => {
                 sx={{ zIndex: 2000 }} maxWidth="md" fullWidth 
             >
                 <DialogTitle sx={{ fontWeight: 700 }}>
-                    {editIndex !== null ? "Edit Product Details" : "Add New Product"}
+                    {editId !== null ? "Edit Product Details" : "Add New Product"}
                 </DialogTitle>
 
                 <Divider />
-
+            
                 <DialogContent sx={{ mt: 1 }}>
                     <Formik
-                        initialValues={editIndex !== null ? products[editIndex] : initialValues}
+                        initialValues={editId !== null ? editProduct : initialValues}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -103,11 +160,11 @@ const AddProduct = () => {
                                 <Box sx={{ display: "flex", justifyContent: "space-between", gap: 3, mb: 2 }}>
                                     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
                                         <label style={{ fontWeight: 600 }}>Product Name</label>
-                                        <Field name="product" as="input" placeholder="Enter product name"
+                                        <Field name="productname" as="input" placeholder="Enter product name"
                                             style={{ padding: "12px 14px", border: "1px solid #ccc", 
                                                 borderRadius: "8px", fontSize: "16px" }}
                                         />
-                                        <ErrorMessage name="product" component="small" style={{ color: "red", fontWeight: 600 }} />
+                                        <ErrorMessage name="productname" component="small" style={{ color: "red", fontWeight: 600 }} />
                                     </Box>
                                     
                                     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
@@ -189,7 +246,7 @@ const AddProduct = () => {
                                     <Button type="submit" variant="contained" 
                                         sx={{ background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
-                                        {editIndex !== null ? "Update" : "Save"}
+                                        {editId !== null ? "Update" : "Save"}
                                     </Button>
                                 </DialogActions>
                             </Form>
@@ -212,13 +269,13 @@ const AddProduct = () => {
                     <Table>
                         <TableHead
                             sx={{ background: "#1e293b",
-                                "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", 
+                                "& .MuiTableCell-root": { color: "#fff", fontSize: "16px",
                                     borderRight: "1px solid rgba(255, 255, 255, 0.1)"
                                 }
                             }}
                         >
                             <TableRow>
-                                <TableCell><strong>Product</strong></TableCell>
+                                <TableCell><strong>Product Name</strong></TableCell>
                                 <TableCell><strong>SKU</strong></TableCell>
                                 <TableCell><strong>Category</strong></TableCell>
                                 <TableCell><strong>Supplier</strong></TableCell>
@@ -232,7 +289,7 @@ const AddProduct = () => {
                         <TableBody
                             sx={{
                                 background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
-                                "& .MuiTableCell-root": { color: "#000", fontSize: "15px",
+                                "& .MuiTableCell-root": { color: "#000", fontSize: "16px",
                                     borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5,
                                     borderRight: "1px solid rgba(126, 126, 126, 0.1)"
                                 }
@@ -246,8 +303,8 @@ const AddProduct = () => {
                             </TableRow>
                         ) : (
                             products.map((item, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{item.product}</TableCell>
+                                <TableRow key={item._id ?? index}>
+                                    <TableCell>{item.productname}</TableCell>
                                     <TableCell>{item.sku}</TableCell>
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell>{item.supplier}</TableCell>
@@ -266,10 +323,15 @@ const AddProduct = () => {
                                                     }
                                                 }}
                                             >
-                                            <IconButton onClick={() => handleDelete(index)}
+                                                <IconButton 
                                                     sx={{
                                                         background:"#fff", color: "#ef4444", transition: "0.2s",
                                                         "&:hover": { background: "#dc2626", color:"#fff" }
+                                                    }}
+                                                    onClick={() => {
+                                                        if (document.activeElement) document.activeElement.blur();
+                                                        dispatch(setDeleteOpen(true))
+                                                        dispatch(setDeleteId(item._id))
                                                     }}
                                                 >
                                                     <RiDeleteBin6Line />
@@ -291,7 +353,11 @@ const AddProduct = () => {
                                                         background: "#fff", color:"#2563eb", transition: "0.2s",
                                                         "&:hover": { background: "#2563eb", color:"#fff" }
                                                     }}
-                                                    onClick={() => handleEdit(index)}
+                                                    onClick={() => {
+                                                        if (document.activeElement) document.activeElement.blur();
+                                                        dispatch(setOpen(true))
+                                                        dispatch(setEditId(item._id));
+                                                    }}
                                                 >
                                                     <FaEdit />
                                                 </IconButton>
@@ -307,7 +373,7 @@ const AddProduct = () => {
             </Paper>
 
             {/* DELETE CONFIRMATION POPUP */}
-            <Dialog open={deleteOpen} onClose={() => dispatch(setDeleteOpen(false))}>
+            <Dialog open={deleteOpen} onClose={() => dispatch(resetDeleteState())}>
                 <DialogTitle sx={{ fontWeight: 600 }}>
                     Delete Product?
                 </DialogTitle>
@@ -319,18 +385,16 @@ const AddProduct = () => {
                 </DialogContent>
 
                 <DialogActions>
-                    <Button sx={{color:"#1e293b"}} onClick={() => dispatch(setDeleteOpen(false))}>Cancel</Button>
+                    <Button sx={{color:"#1e293b"}} onClick={() => dispatch(resetDeleteState())}>Cancel</Button>
                     <Button onClick={confirmDelete} variant="contained"
-                        sx={{ background: "#ef4444", transition:"0.2s ease-in-out", 
-                            "&:hover": { background: "#fff", color: "#ef4444", fontWeight:600 } }}
+                        sx={{ background: "#ef4444" }}
                     >
                         Delete
                     </Button>
                 </DialogActions>
             </Dialog>
-
         </Box>
-    );
-};
+    )
+}   
 
 export default AddProduct;
