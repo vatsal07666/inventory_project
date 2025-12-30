@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 import { Link, useHistory } from "react-router-dom";
-import { Snackbar, Alert, Button, Box } from "@mui/material";
+import { Button, Box } from "@mui/material";
+import { useSnackbar } from "./snackbarContext";
+import axios from "axios";
 
 const LoginSchema = Yup.object({
     username: Yup.string().required("Username is required*"),
@@ -10,17 +12,62 @@ const LoginSchema = Yup.object({
 });
 
 const Login = () => {
-    const [openSnackbar, setOpenSnackbar] = useState(false);
     const history = useHistory();
+    const formikRef = useRef();
+    const { showSnackbar } = useSnackbar();
+    const [ loading, setLoading ] = useState(false)
 
-    const formikRef = useRef(null);
-
-    const fillDemoData = () => {
+    const fillFormData = () => {
         formikRef.current.setValues({
-            username: "demo@gmail.com",
-            password: "demo123",
+            username: "DemoUser000",
+            password: "DEmo@#666"
+        })
+    }
+
+    const token = "soS9mDZAuFry1GGs";
+
+    const handleSubmit = (values, {resetForm}) => {
+        setLoading(true); // start loading
+
+        const headers = {
+            Authorization: token,
+            "Content-Type": "application/json",
+        };
+
+        // GET request
+        axios.get("https://generateapi.techsnack.online/api/login", { headers })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data, getRes.status);
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+            showSnackbar("GET failed", "error");
         });
-    };
+
+        // POST request (login)
+        axios.post( "https://generateapi.techsnack.online/api/login",
+            { username: values.username, password: values.password },
+            { headers }
+        )
+        .then((postRes) => {
+            console.log("POST response:", postRes.data);
+            if (postRes.data.Status === "Success") {
+                showSnackbar("Login successful!", "success");
+                resetForm();
+                history.push("/dashboard");
+            } else {
+                showSnackbar(postRes.data.message || "Login failed", "error");
+            }
+        })
+        .catch((err) => {
+            console.error("POST error:", err);
+            showSnackbar(err.response?.data?.message || "Server error", "error");
+            // if err.response then if .data then use message
+        })
+        .finally(() => {
+            setLoading(false); // Stop loading
+        });
+    }
 
     return (
         <Box className="login-container">
@@ -28,17 +75,11 @@ const Login = () => {
             <Formik innerRef={formikRef}
                 initialValues={{ username: "", password: "" }}
                 validationSchema={LoginSchema}
-                onSubmit={(values, { resetForm }) => {
-                    console.log("Login Data:", values);
-                    setOpenSnackbar(true);
-                    resetForm();
-
-                    history.push("/dashboard");
-                }}
+                onSubmit={handleSubmit}
             >
                 {({ errors, touched }) => (
                     <Form className="login-box">
-                        <h2>Sign in</h2>
+                        <h2>Log in</h2>
 
                         <label>Username</label>
                         <Field name="username" type="text" placeholder="Enter Username" />
@@ -54,7 +95,9 @@ const Login = () => {
                         )}
                         <br />
 
-                        <Button type="submit" variant="contained">Log In</Button>
+                        <Button type="submit" variant="contained" disabled={loading} sx={{textTransform: "none"}}>
+                            {loading ? "Logging in..." : "Log In"}
+                        </Button>
 
                         <p className="signup-text">
                             Don’t have an account?
@@ -64,22 +107,9 @@ const Login = () => {
                 )}
             </Formik>
 
-            <Button variant="contained" onClick={fillDemoData} sx={{mt: 3}}>
-                username: demo@gmail.com, password: demo123
+            <Button variant="contained" onClick={fillFormData} sx={{mt: 3}}>
+                username: DemoUser000, password: DEmo@#666
             </Button>
-
-            {/* Snackbar */}
-            <Snackbar
-                open={openSnackbar}
-                autoHideDuration={3000}
-                onClose={() => setOpenSnackbar(false)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-            >
-                <Alert severity="success" onClose={() => setOpenSnackbar(false)}>
-                    Login successful!
-                </Alert>
-            </Snackbar>
-
         </Box>
     );
 };
