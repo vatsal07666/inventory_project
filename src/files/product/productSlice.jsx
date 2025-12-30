@@ -1,56 +1,77 @@
-// src/redux/slices/productSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-    list: JSON.parse(localStorage.getItem("products")) || [],
+    list: [],
     open: false,
-    editIndex: null,
     deleteOpen: false,
-    deleteIndex: null,
+    deleteId: null,
+    editId: null,
 };
 
 const productSlice = createSlice({
     name: "product",
     initialState,
     reducers: {
+        // ================= UI STATE =================
         setOpen: (state, action) => {
-            state.open = action.payload
+            state.open = action.payload;
         },
-        setEditIndex: (state, action) => {
-            state.editIndex = action.payload 
+        setEditId: (state, action) => {
+            state.editId = action.payload;
         },
         resetUIState: (state) => {
             state.open = false;
-            state.editIndex = null
+            state.editId = null;
         },
 
         setDeleteOpen: (state, action) => {
-            state.deleteOpen = action.payload
+            state.deleteOpen = action.payload;
         },
-        setDeleteIndex: (state, action) => {
-            state.deleteIndex = action.payload
+        setDeleteId: (state, action) => {
+            state.deleteId = action.payload;
         },
         resetDeleteState: (state) => {
             state.deleteOpen = false;
-            state.deleteIndex = null
+            state.deleteId = null;
         },
-        
+
+        // ================= DATA STATE =================
+
+        // GET
+        setProducts: (state, action) => {
+            state.list = action.payload;
+            localStorage.setItem("products", JSON.stringify(state.list));
+        },
+
+        // POST
         addProduct: (state, action) => {
             state.list.push(action.payload);
             localStorage.setItem("products", JSON.stringify(state.list));
         },
-        updateProduct: (state, action) => {
-            const { index, product } = action.payload;
-            state.list[index] = product;
-            localStorage.setItem("products", JSON.stringify(state.list));
-        },
+
+        // DELETE
         deleteProduct: (state, action) => {
-            state.list.splice(action.payload, 1);
+            state.list = state.list.filter((item) => item._id !== action.payload);
             localStorage.setItem("products", JSON.stringify(state.list));
         },
+
+        // Edit / PATCH
+        updateProduct: (state, action) => {
+            state.list = state.list.map(
+                (item) => item._id === action.payload._id ? action.payload : item
+            );
+            localStorage.setItem("products", JSON.stringify(state.list));
+
+            // const index = state.list.findIndex(item => item._id === action.payload._id);
+            // if (index !== -1) state.list[index] = action.payload;
+            // localStorage.setItem("products", JSON.stringify(state.list));
+        },
+
     },
 });
 
-export const { setOpen, setEditIndex, resetUIState, setDeleteOpen, setDeleteIndex, resetDeleteState, 
-    addProduct, updateProduct, deleteProduct } = productSlice.actions;
+export const { setOpen, setEditId, resetUIState, setDeleteOpen, setDeleteId, resetDeleteState,
+    setProducts, addProduct, deleteProduct, updateProduct
+} = productSlice.actions;
+
 export default productSlice.reducer;
