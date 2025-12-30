@@ -1,38 +1,81 @@
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 import { Link, useHistory } from "react-router-dom";
-import { Alert, Button, Snackbar } from "@mui/material";
+import { Button } from "@mui/material";
 import { useState } from "react";
+import axios from "axios";
+import { useSnackbar } from "./snackbarContext";
 
 const RegisterSchema = Yup.object({
     username: Yup.string().required("Username is required*"),
     email: Yup.string().email("Invalid email").required("Email is required*"),
     password: Yup.string().required("Password is required*")
-                .max(8,"Password must be 8 characters")
-                .matches(/[A-Z]/, "Password must contain at least one uppercase character")
-                .matches(/[a-z]/, "Password must contain at least one lowercase character")
-                .matches(/\d/, "Password must contain at least one number")
-                .matches(/[!@#$%^&*()]/, "Password must contain at least one special character")
+                // .max(8,"Password must be 8 characters")
+                // .matches(/[A-Z]/, "Password must contain at least one uppercase character")
+                // .matches(/[a-z]/, "Password must contain at least one lowercase character")
+                // .matches(/\d/, "Password must contain at least one number")
+                // .matches(/[!@#$%^&*()]/, "Password must contain at least one special character")
 });
 
 const CreateAccount = () => {
-    const [openSnackbar, setOpenSnackbar] = useState(false)
+    const { showSnackbar } = useSnackbar();
+    const [loading, setLoading] = useState(false)
     const history = useHistory();
+
+    const token = "fJDq0Iu2xB9hHXbo";
+
+    const handleSubmit = (values, {resetForm}) => {
+        setLoading(true); // start loading
+
+        const headers = {
+            Authorization: token,
+            "Content-Type": "application/json",
+        };
+
+        // GET request
+        axios.get("https://generateapi.techsnack.online/api/register", { headers })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data, getRes.status);
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+            showSnackbar("GET failed", "error");
+        });
+
+        // POST request (login)
+        axios.post( "https://generateapi.techsnack.online/api/register",
+            { username: values.username, email: values.email, password: values.password },
+            { headers }
+        )
+        .then((postRes) => {
+            console.log("POST response:", postRes.data);
+            if (postRes.data.Status === "Success") {
+                showSnackbar("Account Created successful!", "success");
+                resetForm();
+                history.push("/");
+            } else {
+                showSnackbar(postRes.data.message || "Login failed", "error");
+            }
+        })
+        .catch((err) => {
+            console.error("POST error:", err);
+            showSnackbar(err.response?.data?.message || "Server error", "error");
+            // if err.response then if .data then use message
+        })
+        .finally(() => {
+            setLoading(false); // Stop loading
+        });
+    }
 
     return (
         <div className="signup-container">
             <Formik initialValues={{ username: "", email: "", password: "" }}
-                    validationSchema={RegisterSchema}
-                    onSubmit={(values, { resetForm }) => {
-                    console.log("New Account:", values);
-                    setOpenSnackbar(true)
-                    resetForm();
-
-                    history.push("/login");
-                }} >
+                validationSchema={RegisterSchema}
+                onSubmit={handleSubmit} 
+            >
                 {({ errors, touched }) => (
                     <Form className="signup-box">
-                        <h2>Create Account</h2>
+                        <h2>Sign Up</h2>
 
                         <label>Username</label>
                         <Field name="username" type="text" placeholder="Enter Username" />
@@ -49,7 +92,9 @@ const CreateAccount = () => {
                         {errors.password && touched.password && (<p style={{color:"red"}}>{errors.password}</p>)}
                         <br />
 
-                        <Button type="submit" variant="contained">Create Account</Button>
+                        <Button type="submit" variant="contained" disabled={loading}>
+                            {loading ? "Creating Account..." : "Create Account"}
+                        </Button>
 
                         <p className="login-text">
                             Already have an account?
@@ -58,30 +103,8 @@ const CreateAccount = () => {
                     </Form>
                 )}
             </Formik>
-
-            <Snackbar open={openSnackbar}
-                autoHideDuration={3000}
-                onClose={() => setOpenSnackbar(false)}
-                anchorOrigin={{vertical:"bottom", horizontal:"center"}}
-            >
-                <Alert severity="success" onClose={() => setOpenSnackbar(false)}>Create Account Successfully!</Alert>
-            </Snackbar>
         </div>
     );
 };
 
 export default CreateAccount;
-
-
-// import { useNavigate } from "react-router-dom";
-// const navigate = useNavigate();
-
-// <button
-//     type="button"
-//     onClick={() => {
-//         setLoginbar(true);
-//         setTimeout(() => navigate("/"), 1500);
-//     }}
-// >
-//     Log in
-// </button>
