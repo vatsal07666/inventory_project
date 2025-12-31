@@ -13,6 +13,7 @@ import axios from "axios";
 import { useCallback, useEffect } from "react";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { FaEdit } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 const AddProduct = () => {
     const { list: products = [], open, deleteOpen, deleteId, editId } = useSelector((state) => state.product);
@@ -55,9 +56,7 @@ const AddProduct = () => {
     }, [fetchProducts])
 
     // ---------- Submit ----------
-    const handleSubmit = (values, { resetForm }) => {
-        if (document.activeElement) document.activeElement.blur();
-
+    const handleSubmit = (values, { resetForm }, dirty) => {
         const productData = { 
             productname: values.productname,
             sku: values.sku,
@@ -69,6 +68,11 @@ const AddProduct = () => {
         };
         
         // ---------- PATCH ----------
+        if(editId !== null && !dirty){
+            toast.info("Nothing Changed");
+            return;
+        }
+
         if(editId !== null) {
             axios.patch( `https://generateapi.techsnack.online/api/product/${editId}`, 
                 productData, { headers } 
@@ -76,46 +80,54 @@ const AddProduct = () => {
             .then((patchRes) => {
                 console.log("PATCH response:", patchRes.data);
                 dispatch(updateProduct(patchRes.data.Data));
-                resetForm()
-                dispatch(resetUIState())
-                fetchProducts()
+                resetForm();
+                dispatch(resetUIState());
+                toast.success("Product Updated Successfully....");
+                fetchProducts();
             })
-            .catch((err) => {
-                console.error("PATCH error:", err);
-            })
+            .catch(() => toast.error("Failed to Update Product!"))
         } else {
-            // ---------- POST ---------
+            // ---------- POST ----------
             axios.post( "https://generateapi.techsnack.online/api/product", productData, 
                 {headers} 
             )
             .then((postRes) => {
                 console.log("POST response: ", postRes.data);
                 dispatch(addProduct(postRes.data.Data));
+                toast.success("Product Added Successfully....");
                 resetForm();
                 dispatch(resetUIState());
                 fetchProducts();
             })
-            .catch((err) => {
-                console.error("ADD error:", err);
-            });
+            .catch(() => toast.error("Failed to Add Product!"))
         }
     };
- 
+
     // ---------- DELETE ----------
     const confirmDelete = () => {
         if (document.activeElement) document.activeElement.blur();
         axios.delete( `https://generateapi.techsnack.online/api/product/${deleteId}`, 
             { headers } 
         )
-        .then((delRes) => {
+        .then(() => {
             dispatch(deleteProduct(deleteId));
             dispatch(resetDeleteState());
-            console.log("Delete Product Successfully....", delRes.status);
+            toast.success("Product Deleted Successfully....")
             fetchProducts();
         })
-        .catch((err) => {
-            console.log("DELETE error:", err)
-        })
+        .catch(() => toast.error("Failed to Delete Product!"))
+    }
+
+    const handleDelete = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setDeleteOpen(true));
+        dispatch(setDeleteId(item._id));
+    }
+
+    const handleEdit = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true));
+        dispatch(setEditId(item._id));
     }
 
     const handleOpenDialog = () => { 
@@ -123,7 +135,7 @@ const AddProduct = () => {
         dispatch(setOpen(true)) 
     };
 
-    const editProduct = products.find(item => item._id === editId);
+    const editProduct = products.find(item => item._id === editId) || initialValues;
     
     return(
         <Box>
@@ -149,7 +161,7 @@ const AddProduct = () => {
             
                 <DialogContent sx={{ mt: 1 }}>
                     <Formik
-                        initialValues={editId !== null ? editProduct : initialValues}
+                        initialValues={editProduct}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -328,11 +340,7 @@ const AddProduct = () => {
                                                         background:"#fff", color: "#ef4444", transition: "0.2s",
                                                         "&:hover": { background: "#dc2626", color:"#fff" }
                                                     }}
-                                                    onClick={() => {
-                                                        if (document.activeElement) document.activeElement.blur();
-                                                        dispatch(setDeleteOpen(true))
-                                                        dispatch(setDeleteId(item._id))
-                                                    }}
+                                                    onClick={() => handleDelete(item)}
                                                 >
                                                     <RiDeleteBin6Line />
                                                 </IconButton>
@@ -353,11 +361,7 @@ const AddProduct = () => {
                                                         background: "#fff", color:"#2563eb", transition: "0.2s",
                                                         "&:hover": { background: "#2563eb", color:"#fff" }
                                                     }}
-                                                    onClick={() => {
-                                                        if (document.activeElement) document.activeElement.blur();
-                                                        dispatch(setOpen(true))
-                                                        dispatch(setEditId(item._id));
-                                                    }}
+                                                    onClick={() => handleEdit(item)}
                                                 >
                                                     <FaEdit />
                                                 </IconButton>
