@@ -14,9 +14,10 @@ const ViewProduct = () => {
                 <Table>
                     <TableHead sx={{ background: "#1e293b",
                             "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", fontWeight: 600 }
-                        }}>
+                        }}
+                    >
                         <TableRow>
-                            <TableCell>Product</TableCell>
+                            <TableCell>Product Name</TableCell>
                             <TableCell>SKU</TableCell>
                             <TableCell>Category</TableCell>
                             <TableCell>Supplier</TableCell>
@@ -31,17 +32,18 @@ const ViewProduct = () => {
                             "& .MuiTableCell-root": { color: "#000000ff", fontSize: "16px",
                                 borderBottom: "1px solid rgba(0, 0, 0, 0.2)"
                             }
-                        }}>
+                        }}
+                    >
                         {products.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 10 }}>
-                                No products added yet
+                                    No products added yet
                                 </TableCell>
                             </TableRow>
                         ) : (
                                 products.map((item, index) => (
                                     <TableRow key={index}>
-                                        <TableCell>{item.product}</TableCell>
+                                        <TableCell>{item.productname}</TableCell>
                                         <TableCell>{item.sku}</TableCell>
                                         <TableCell>{item.category}</TableCell>
                                         <TableCell>{item.supplier}</TableCell>
