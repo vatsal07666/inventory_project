@@ -61,12 +61,7 @@ const productSlice = createSlice({
                 (item) => item._id === action.payload._id ? action.payload : item
             );
             localStorage.setItem("products", JSON.stringify(state.list));
-
-            // const index = state.list.findIndex(item => item._id === action.payload._id);
-            // if (index !== -1) state.list[index] = action.payload;
-            // localStorage.setItem("products", JSON.stringify(state.list));
         },
-
     },
 });
 
