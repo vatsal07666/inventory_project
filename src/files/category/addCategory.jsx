@@ -8,11 +8,15 @@ import { RiDeleteBin6Line } from "react-icons/ri";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { useSelector, useDispatch } from "react-redux";
-import { addCategory, resetUIState, setDeleteIndex, setDeleteOpen, setEditIndex, setOpen, updateCategory, 
-    deleteCategory, resetDeleteState } from "./categorySlice";
+import { addCategory, resetUIState, setEditId, setDeleteId, setDeleteOpen, setOpen, 
+    updateCategory, deleteCategory, resetDeleteState, setCategories,
+} from "./categorySlice";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useCallback, useEffect } from "react";
 
 const AddCategory = () => {
-    const { list: categories, open, editIndex, deleteOpen, deleteIndex } = useSelector(state => state.category);
+    const { list: categories = [], open, editId, deleteOpen, deleteId } = useSelector(state => state.category);
     const dispatch = useDispatch();
 
     const categoryOptions = ["Electronics", "Home Appliances", "Fashion", "Sports"];
@@ -24,41 +28,108 @@ const AddCategory = () => {
         description: Yup.string().required("Description is required*"),
     });
 
+    const token = "Bk6pQZcmMncGnxeT";
+    const headers = { Authorization: token, "Content-Type": "application/json" };
+
+    // ---------- GET ----------
+    const fetchCategories = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/category", { 
+            headers: { Authorization: token, "Content-Type": "application/json" }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setCategories(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
+
+    useEffect(() => {
+        fetchCategories()
+    }, [fetchCategories])
+
+    // ---------- Submit ----------
     const handleSubmit = (values, { resetForm }) => {
-        const categoryData = {...values}
-
-        if (editIndex !== null) {
-        dispatch(updateCategory({ index: editIndex, category: categoryData }));
-        } else {
-        dispatch(addCategory(categoryData));
+        const categoryData = { 
+            category: values.category,
+            description: values.description
+        };
+        
+        // show "Nothing Changed" toast If data not changed when update
+        const valuesChanged = (values, original) => {
+            return Object.keys(values).some(key => values[key] !== original[key]);
+        };
+        if(editId !== null && !valuesChanged(values, editCategory)){
+            toast.info("Nothing Changed!");
+            return;
         }
-
-        resetForm();
-        dispatch(resetUIState());
+        
+        if(editId !== null) {
+            // ---------- PATCH ----------
+            axios.patch( `https://generateapi.techsnack.online/api/category/${editId}`, 
+                categoryData, { headers } 
+            )
+            .then((patchRes) => {
+                console.log("PATCH response:", patchRes.data);
+                dispatch(updateCategory(patchRes.data.Data));
+                resetForm();
+                dispatch(resetUIState());
+                toast.success("Category Updated Successfully....");
+                fetchCategories();
+            })
+            .catch(() => toast.error("Failed to Update Category!"))
+        } else {
+            // ---------- POST ----------
+            axios.post( "https://generateapi.techsnack.online/api/category", categoryData, 
+                {headers} 
+            )
+            .then((postRes) => {
+                console.log("POST response: ", postRes.data);
+                dispatch(addCategory(postRes.data.Data));
+                toast.success("Category Added Successfully....");
+                resetForm();
+                dispatch(resetUIState());
+                fetchCategories();
+            })
+            .catch(() => toast.error("Failed to Add Category!"))
+        }
     };
 
-    const handleEdit = (index) => {
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setEditIndex(index));
-        dispatch(setOpen(true));
-    };
-
-    const handleDelete = (index) => {
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setDeleteIndex(index));
-        dispatch(setDeleteOpen(true))
-    };
-
+    // ---------- DELETE ----------
     const confirmDelete = () => {
-        dispatch(deleteCategory(deleteIndex));
-        dispatch(resetDeleteState())
+        if (document.activeElement) document.activeElement.blur();
+        axios.delete( `https://generateapi.techsnack.online/api/category/${deleteId}`, 
+            { headers } 
+        )
+        .then(() => {
+            dispatch(deleteCategory(deleteId));
+            dispatch(resetDeleteState());
+            toast.success("Category Deleted Successfully....")
+            fetchCategories();
+        })
+        .catch(() => toast.error("Failed to Delete Category!"))
+    }
+
+    const handleDelete = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setDeleteOpen(true));
+        dispatch(setDeleteId(item._id));
+    }
+
+    const handleEdit = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true));
+        dispatch(setEditId(item._id));
     }
 
     const handleOpenDialog = () => { 
         if (document.activeElement) document.activeElement.blur();
-        dispatch(setOpen(true)) 
+        dispatch(setOpen(true)) ;
     };
 
+    const editCategory = editId ? categories.find(item => item._id === editId) : initialValues;
+    
     return (
         <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -74,14 +145,14 @@ const AddCategory = () => {
 
             <Dialog open={open} onClose={() => dispatch(resetUIState())} sx={{ zIndex: 2000 }} maxWidth="md" fullWidth>
                 <DialogTitle>
-                    {editIndex !== null ? "Edit Category" : "Add Category"}
+                    {editId !== null ? "Edit Category" : "Add Category"}
                 </DialogTitle>
 
                 <Divider />
 
                 <DialogContent>
                     <Formik
-                        initialValues={editIndex !== null ? categories[editIndex] : initialValues}
+                        initialValues={editCategory}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -126,7 +197,7 @@ const AddCategory = () => {
                                     <Button variant="contained" type="submit"
                                         sx={{  background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
-                                        {editIndex !== null ? "Update" : "Save"}
+                                        {editId !== null ? "Update" : "Save"}
                                     </Button>
                                 </DialogActions>
                             </Form>
@@ -157,8 +228,9 @@ const AddCategory = () => {
                         </TableHead>
 
                         <TableBody 
-                            sx={{ background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
-                                "& .MuiTableCell-root": { color: "#000000ff", fontSize: "15px",
+                            sx={{
+                                background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
+                                "& .MuiTableCell-root": { color: "#000000ff", fontSize: "16px",
                                     borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5,
                                     borderRight: "1px solid rgba(126, 126, 126, 0.1)"
                                 }
@@ -173,7 +245,7 @@ const AddCategory = () => {
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell>{item.description}</TableCell>
                                     <TableCell>
-                                        <Box sx={{display: "flex", gap: 1}}>
+                                        <Box sx={{display:"flex", gap: 1}}>
                                             {/* Delete */}
                                             <Tooltip title="Delete" component={Paper}
                                                 slotProps={{
@@ -184,16 +256,17 @@ const AddCategory = () => {
                                                     }
                                                 }}
                                             >
-                                            <IconButton onClick={() => handleDelete(index)}
+                                                <IconButton 
                                                     sx={{
                                                         background:"#fff", color: "#ef4444", transition: "0.2s",
                                                         "&:hover": { background: "#dc2626", color:"#fff" }
                                                     }}
+                                                    onClick={() => handleDelete(item)}
                                                 >
                                                     <RiDeleteBin6Line />
                                                 </IconButton>
                                             </Tooltip>
-                                            
+
                                             {/* Edit */}
                                             <Tooltip title="Edit" component={Paper}
                                                 slotProps={{
@@ -209,7 +282,7 @@ const AddCategory = () => {
                                                         background: "#fff", color:"#2563eb", transition: "0.2s",
                                                         "&:hover": { background: "#2563eb", color:"#fff" }
                                                     }}
-                                                    onClick={() => handleEdit(index)}
+                                                    onClick={() => handleEdit(item)}
                                                 >
                                                     <FaEdit />
                                                 </IconButton>
@@ -239,8 +312,7 @@ const AddCategory = () => {
                 <DialogActions>
                     <Button sx={{color:"#1e293b"}} onClick={() => dispatch(setDeleteOpen(false))}>Cancel</Button>
                     <Button onClick={confirmDelete} variant="contained"
-                        sx={{ background: "#ef4444", transition:"0.2s ease-in-out", 
-                            "&:hover": { background: "#fff", color: "#ef4444", fontWeight:600 } }}
+                        sx={{ background: "#ef4444" }}
                     >
                         Delete
                     </Button>
