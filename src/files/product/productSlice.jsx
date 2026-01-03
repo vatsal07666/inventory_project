@@ -57,9 +57,9 @@ const productSlice = createSlice({
 
         // Edit / PATCH
         updateProduct: (state, action) => {
-            state.list = state.list.map(
-                (item) => item._id === action.payload._id ? action.payload : item
-            );
+            const index = state.list.findIndex((item) => item._id === action.payload._id );
+            // findIndex return -1 if "not found"(the data)
+            if(index !== -1) state.list[index] = action.payload;
             localStorage.setItem("products", JSON.stringify(state.list));
         },
     },
