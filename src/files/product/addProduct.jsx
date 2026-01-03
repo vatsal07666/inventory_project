@@ -56,7 +56,7 @@ const AddProduct = () => {
     }, [fetchProducts])
 
     // ---------- Submit ----------
-    const handleSubmit = (values, { resetForm }, dirty) => {
+    const handleSubmit = (values, { resetForm }) => {
         const productData = { 
             productname: values.productname,
             sku: values.sku,
@@ -67,13 +67,17 @@ const AddProduct = () => {
             sellingprice: Number(values.sellingprice) 
         };
         
-        // ---------- PATCH ----------
-        if(editId !== null && !dirty){
-            toast.info("Nothing Changed");
+        // show "Nothing Changed" toast If data not changed when update
+        const valuesChanged = (values, original) => {
+            return Object.keys(values).some(key => values[key] !== original[key]);
+        };
+        if(editId !== null && !valuesChanged(values, editProduct)){
+            toast.info("Nothing Changed!");
             return;
         }
-
+        
         if(editId !== null) {
+            // ---------- PATCH ----------
             axios.patch( `https://generateapi.techsnack.online/api/product/${editId}`, 
                 productData, { headers } 
             )
@@ -135,7 +139,7 @@ const AddProduct = () => {
         dispatch(setOpen(true)) 
     };
 
-    const editProduct = products.find(item => item._id === editId) || initialValues;
+    const editProduct = editId ? products.find(item => item._id === editId) : initialValues;
     
     return(
         <Box>
@@ -168,86 +172,23 @@ const AddProduct = () => {
                     >
                         {() => (
                             <Form>
-                                {/* First Row: Product & SKU */}
-                                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 3, mb: 2 }}>
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{ fontWeight: 600 }}>Product Name</label>
-                                        <Field name="productname" as="input" placeholder="Enter product name"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", 
-                                                borderRadius: "8px", fontSize: "16px" }}
-                                        />
-                                        <ErrorMessage name="productname" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
-                                    
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{ fontWeight: 600 }}>SKU</label>
-                                        <Field name="sku" as="input" placeholder="Enter SKU"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", borderRadius: "8px", 
-                                                    fontSize: "16px" }}
-                                        />
-                                        <ErrorMessage name="sku" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
+                                {/* Product & SKU */}
+                                <Box sx={{ display: "flex", gap: 3, mb: 2 }}>
+                                    <FieldInput name="productname" label="Product Name" placeholder="Enter product name" />
+                                    <FieldInput name="sku" label="SKU" placeholder="Enter SKU" />
                                 </Box>
 
-                                <br />
-
-                                {/* Second Row: Category & Supplier */}
-                                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 3, mb: 2 }}>
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{ fontWeight: 600 }}>Category</label>
-                                        <Field name="category" as="select"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", 
-                                                borderRadius: "8px", fontSize: "16px" }}
-                                        >
-                                            <option value="" disabled>Select Category</option>
-                                            {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-                                        </Field>
-                                        <ErrorMessage name="category" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
-
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{ fontWeight: 600 }}>Supplier</label>
-                                        <Field name="supplier" as="select"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", 
-                                                borderRadius: "8px", fontSize: "16px" }}
-                                        >
-                                            <option value="" disabled>Select Supplier</option>
-                                            {suppliers.map((sup) => <option key={sup} value={sup}>{sup}</option>)}
-                                        </Field>
-                                        <ErrorMessage name="supplier" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
+                                {/* Category & Supplier */}
+                                <Box sx={{ display: "flex", gap: 3, mb: 2 }}>
+                                    <FieldSelect name="category" label="Category" options={categories} />
+                                    <FieldSelect name="supplier" label="Supplier" options={suppliers} />
                                 </Box>
 
-                                <br />
-
-                                {/* Third Row: Stock, Cost & Selling Price */}
-                                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 3, mb: 2 }}>
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{fontWeight: 600}}>Stock</label>
-                                        <Field name="stock" type="number" placeholder="Enter Stock (Units)"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", 
-                                                borderRadius: "8px", fontSize: "16px" }}
-                                        />
-                                        <ErrorMessage name="stock" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
-                                    
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{ fontWeight: 600 }}>Cost Price</label>
-                                        <Field name="costprice" type="number" placeholder="Enter Cost Price"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", 
-                                                borderRadius: "8px", fontSize: "16px" }}
-                                        />
-                                        <ErrorMessage name="costprice" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
-
-                                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <label style={{ fontWeight: 600 }}>Selling Price</label>
-                                        <Field name="sellingprice" type="number" placeholder="Enter Selling Price"
-                                            style={{ padding: "12px 14px", border: "1px solid #ccc", 
-                                                borderRadius: "8px", fontSize: "16px" }}
-                                        />
-                                        <ErrorMessage name="sellingprice" component="small" style={{ color: "red", fontWeight: 600 }} />
-                                    </Box>
+                                {/* Stock, Cost, Selling Price */}
+                                <Box sx={{ display: "flex", gap: 3, mb: 2 }}>
+                                    <FieldInput name="stock" label="Stock" type="number" placeholder="Enter Stock (Units)" />
+                                    <FieldInput name="costprice" label="Cost Price" type="number" placeholder="Enter Cost Price" />
+                                    <FieldInput name="sellingprice" label="Selling Price" type="number" placeholder="Enter Selling Price" />
                                 </Box>
 
                                 <DialogActions>
@@ -255,7 +196,7 @@ const AddProduct = () => {
                                         Cancel
                                     </Button>
                                     
-                                    <Button type="submit" variant="contained" 
+                                    <Button type="submit" variant="contained"                   
                                         sx={{ background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
                                         {editId !== null ? "Update" : "Save"}
@@ -399,6 +340,26 @@ const AddProduct = () => {
             </Dialog>
         </Box>
     )
-}   
+}  
+
+// Reusable Field Components
+const FieldInput = ({ name, label, ...props }) => (
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
+        <label style={{ fontWeight: 600 }}>{label}</label>
+        <Field name={name} as="input" {...props} style={{ padding: 12, border: "1px solid #ccc", borderRadius: 8, fontSize: 16 }} />
+        <ErrorMessage name={name} component="small" style={{ color: "red", fontWeight: 600 }} />
+    </Box>
+);
+
+const FieldSelect = ({ name, label, options }) => (
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
+        <label style={{ fontWeight: 600 }}>{label}</label>
+        <Field name={name} as="select" style={{ padding: 12, border: "1px solid #ccc", borderRadius: 8, fontSize: 16 }}>
+            <option value="" disabled>Select {label}</option>
+            {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+        </Field>
+        <ErrorMessage name={name} component="small" style={{ color: "red", fontWeight: 600 }} />
+    </Box>
+);
 
 export default AddProduct;
