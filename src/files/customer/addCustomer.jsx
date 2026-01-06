@@ -51,7 +51,7 @@ const AddCustomer = () => {
     const handleSubmit = (values, { resetForm }) => {
         const customerData = { 
             customer: values.customer, 
-            email: values.customer,
+            email: values.email,
             address: values.address,
             phone: Number(values.phone) 
         };
