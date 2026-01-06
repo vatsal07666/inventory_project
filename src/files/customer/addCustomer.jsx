@@ -7,11 +7,14 @@ import AddIcon from "@mui/icons-material/Add";
 import { FaEdit } from "react-icons/fa";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
-import { addCustomer, deleteCustomer, resetDeleteState, resetUIState, setDeleteIndex, setDeleteOpen, setEditIndex, setOpen, updateCustomer } from "./customerSlice";
+import { addCustomer, deleteCustomer, resetDeleteState, resetUIState, setCustomer, setDeleteId, setDeleteOpen, setEditId, setOpen, updateCustomer } from "./customerSlice";
 import { ErrorMessage, Field, Form, Formik } from "formik";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useCallback, useEffect } from "react";
 
 const AddCustomer = () => {
-    const { list: customers, open, editIndex, deleteOpen, deleteIndex } = useSelector((state) => state.customer);
+    const { list: customers = [], open, editId, deleteOpen, deleteId } = useSelector((state) => state.customer);
     const dispatch = useDispatch();
 
     const initialValues = { customer: "", email: "", address: "", phone: "" }
@@ -23,43 +26,100 @@ const AddCustomer = () => {
         phone: Yup.string().matches(/^[0-9]{10}$/, "Phone must be exactly 10 digits*")
             .required("Phone is Requaired*"),
     });
-    
-        const handleSubmit = (values, { resetForm }) => {
-            const customerData = { 
-                ...values, phone: values.phone 
-            };
-    
-            if (editIndex !== null) {
-                dispatch(updateCustomer({ index: editIndex, customer: customerData }));
-            } else {
-                dispatch(addCustomer(customerData));
-            }
-    
-            resetForm();
-            dispatch(resetUIState())
-        };
-    
-        const handleEdit = (index) => { 
-            if (document.activeElement) document.activeElement.blur();
-            dispatch(setEditIndex(index));
-            dispatch(setOpen(true))
-        };
-    
-        const handleDelete = (index) => { 
-            if (document.activeElement) document.activeElement.blur();
-            dispatch(setDeleteIndex(index));
-            dispatch(setDeleteOpen(true))
-        };
-    
-        const confirmDelete = () => {
-            dispatch(deleteCustomer(deleteIndex));
-            dispatch(resetDeleteState())
-        }
 
-        const handleOpenDialog = () => { 
-            if (document.activeElement) document.activeElement.blur();
-            dispatch(setOpen(true)) 
+    const token = "VnE3L3X3en8nd34P";
+    const headers = { Authorization: token, "Content-Type": "application/json" };
+
+    // ---------- GET ----------
+    const fetchCustomer = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/customer", { 
+            headers: { Authorization: token, "Content-Type": "application/json" }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setCustomer(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
+
+    useEffect(() => {
+        fetchCustomer();
+    }, [fetchCustomer])
+    
+    const handleSubmit = (values, { resetForm }) => {
+        const customerData = { 
+            customer: values.customer, 
+            email: values.customer,
+            address: values.address,
+            phone: Number(values.phone) 
         };
+
+        if(editId !== null) {
+            // ---------- PATCH ----------
+            axios.patch( `https://generateapi.techsnack.online/api/customer/${editId}`, 
+                customerData, { headers } 
+            )
+            .then((patchRes) => {
+                console.log("PATCH response:", patchRes.data);
+                dispatch(updateCustomer(patchRes.data.Data));
+                resetForm();
+                dispatch(resetUIState());
+                toast.success("Customer Updated Successfully....");
+                fetchCustomer();
+            })
+            .catch(() => toast.error("Failed to Update Customer!"))
+        } else {
+            // ---------- POST ----------
+            axios.post( "https://generateapi.techsnack.online/api/customer", customerData, 
+                {headers} 
+            )
+            .then((postRes) => {
+                console.log("POST response: ", postRes.data);
+                dispatch(addCustomer(postRes.data.Data));
+                toast.success("Customer Added Successfully....");
+                resetForm();
+                dispatch(resetUIState());
+                fetchCustomer();
+            })
+            .catch(() => toast.error("Failed to Add Customer!"))
+        }
+    };
+    
+    // ---------- DELETE ----------
+    const confirmDelete = () => {
+        if (document.activeElement) document.activeElement.blur();
+        axios.delete( `https://generateapi.techsnack.online/api/customer/${deleteId}`, 
+            { headers } 
+        )
+        .then(() => {
+            dispatch(deleteCustomer(deleteId));
+            dispatch(resetDeleteState());
+            toast.success("Customer Deleted Successfully....")
+            fetchCustomer();
+        })
+        .catch(() => toast.error("Failed to Delete Customer!"))
+    }
+
+    const handleDelete = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setDeleteOpen(true));
+        dispatch(setDeleteId(item._id));
+    }
+
+    const handleEdit = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true));
+        dispatch(setEditId(item._id));
+    }
+
+    const handleOpenDialog = () => { 
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true)) 
+    };
+
+    const editCustomer = editId ? customers.find(item => item._id === editId) : initialValues;
 
     return(
         <Box>
@@ -76,14 +136,14 @@ const AddCustomer = () => {
         
             <Dialog open={open} onClose={() => dispatch(resetUIState())} sx={{ zIndex: 2000 }} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ fontWeight: 700 }}>
-                    {editIndex !== null ? "Edit Customer Details" : "Add New Customer"}
+                    {editId !== null ? "Edit Customer Details" : "Add New Customer"}
                 </DialogTitle>
             
                 <Divider />
             
                 <DialogContent sx={{ mt: 1 }}>
                     <Formik
-                        initialValues={editIndex !== null ? customers[editIndex] : initialValues}
+                        initialValues={editCustomer}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -143,7 +203,7 @@ const AddCustomer = () => {
                                     <Button type="submit" variant="contained" 
                                         sx={{ background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
-                                        {editIndex !== null ? "Update" : "Save"}
+                                        {editId !== null ? "Update" : "Save"}
                                     </Button>
                                 </DialogActions>
                             </Form>
@@ -214,7 +274,7 @@ const AddCustomer = () => {
                                                     }
                                                 }}
                                             >
-                                            <IconButton onClick={() => handleDelete(index)}
+                                            <IconButton onClick={() => handleDelete(item)}
                                                     sx={{
                                                         background:"#fff", color: "#ef4444", transition: "0.2s",
                                                         "&:hover": { background: "#dc2626", color:"#fff" }
@@ -239,7 +299,7 @@ const AddCustomer = () => {
                                                         background: "#fff", color:"#2563eb", transition: "0.2s",
                                                         "&:hover": { background: "#2563eb", color:"#fff" }
                                                     }}
-                                                    onClick={() => handleEdit(index)}
+                                                    onClick={() => handleEdit(item)}
                                                 >
                                                     <FaEdit />
                                                 </IconButton>
@@ -269,8 +329,7 @@ const AddCustomer = () => {
                 <DialogActions>
                     <Button sx={{color:"#1e293b"}} onClick={() => dispatch(setDeleteOpen(false))}>Cancel</Button>
                     <Button onClick={confirmDelete} variant="contained"
-                        sx={{ background: "#ef4444", transition:"0.2s ease-in-out", 
-                            "&:hover": { background: "#fff", color: "#ef4444", fontWeight:600 } }}
+                        sx={{ background: "#ef4444" }}
                     >
                         Delete
                     </Button>
