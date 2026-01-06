@@ -7,10 +7,13 @@ import { RiDeleteBin6Line } from "react-icons/ri";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
-import { addUser, deleteUser, resetDeleteState, resetUIState, setDeleteIndex, setDeleteOpen, setEditIndex, setOpen, updateUser } from "./userSlice";
+import { addUser, deleteUser, resetDeleteState, resetUIState, setDeleteId, setDeleteOpen, setEditId, setOpen, setUser, updateUser } from "./userSlice";
+import axios from "axios";
+import { useCallback, useEffect } from "react";
+import { toast } from "react-toastify";
 
 const AddProduct = () => {
-    const { list: users, open, editIndex, deleteOpen, deleteIndex } = useSelector((state) => state.user);
+    const { list: users = [], open, editId, deleteOpen, deleteId } = useSelector((state) => state.user);
     const dispatch = useDispatch();
 
     const roles = ["Admin", "Manager", "Customer"];
@@ -24,42 +27,99 @@ const AddProduct = () => {
         phone: Yup.string().matches(/^[0-9]{10}$/, "Phone must be exactly 10 digits*").required("Phone is Requaired*"),
     });
 
+    const token = "gyJe9cJXUdjCoaX0";
+    const headers = { Authorization: token, "Content-Type": "application/json" };
+    
+    // ---------- GET ----------
+    const fetchUser = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/user", { 
+            headers: { Authorization: token, "Content-Type": "application/json" }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setUser(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
+
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser])
+
     const handleSubmit = (values, { resetForm }) => {
-        const userData = { 
-            ...values, phone: values.phone
+        const userData = {  
+            fullname: values.fullname,
+            email: values.email,
+            role: values.role,
+            phone: Number(values.phone) 
         };
 
-        if (editIndex !== null) {
-            dispatch(updateUser({ index: editIndex, user: userData }));
+        if(editId !== null) {
+            // ---------- PATCH ----------
+            axios.patch( `https://generateapi.techsnack.online/api/user/${editId}`, 
+                userData, { headers } 
+            )
+            .then((patchRes) => {
+                console.log("PATCH response:", patchRes.data);
+                dispatch(updateUser(patchRes.data.Data));
+                resetForm();
+                dispatch(resetUIState());
+                toast.success("User Updated Successfully....");
+                fetchUser();
+            })
+            .catch(() => toast.error("Failed to Update User!"))
         } else {
-            dispatch(addUser(userData));
+            // ---------- POST ----------
+            axios.post( "https://generateapi.techsnack.online/api/user", userData, 
+                {headers} 
+            )
+            .then((postRes) => {
+                console.log("POST response: ", postRes.data);
+                dispatch(addUser(postRes.data.Data));
+                toast.success("User Added Successfully....");
+                resetForm();
+                dispatch(resetUIState());
+                fetchUser();
+            })
+            .catch(() => toast.error("Failed to Add User!"))
         }
-
-        resetForm();
-        dispatch(resetUIState())
     };
 
-    const handleEdit = (index) => {
-        if (document.activeElement) document.activeElement.blur(); 
-        dispatch(setEditIndex(index));
-        dispatch(setOpen(true))
-    };
-
-    const handleDelete = (index) => { 
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setDeleteIndex(index));
-        dispatch(setDeleteOpen(true))
-    };
-
+    // ---------- DELETE ----------
     const confirmDelete = () => {
-        dispatch(deleteUser(deleteIndex));
-        dispatch(resetDeleteState())
+        if (document.activeElement) document.activeElement.blur();
+        axios.delete( `https://generateapi.techsnack.online/api/user/${deleteId}`, 
+            { headers } 
+        )
+        .then(() => {
+            dispatch(deleteUser(deleteId));
+            dispatch(resetDeleteState());
+            toast.success("User Deleted Successfully....")
+            fetchUser();
+        })
+        .catch(() => toast.error("Failed to Delete User!"))
+    }
+
+    const handleDelete = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setDeleteOpen(true));
+        dispatch(setDeleteId(item._id));
+    }
+
+    const handleEdit = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true));
+        dispatch(setEditId(item._id));
     }
 
     const handleOpenDialog = () => { 
         if (document.activeElement) document.activeElement.blur();
         dispatch(setOpen(true)) 
     };
+
+    const editUser = editId ? users.find(item => item._id === editId) : initialValues;
 
     return (
         <Box>
@@ -76,14 +136,14 @@ const AddProduct = () => {
 
             <Dialog open={open} onClose={() => dispatch(resetUIState())} sx={{ zIndex: 2000 }} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ fontWeight: 700 }}>
-                    {editIndex !== null ? "Edit User Details" : "Add New User"}
+                    {editId !== null ? "Edit User Details" : "Add New User"}
                 </DialogTitle>
 
                 <Divider />
 
                 <DialogContent sx={{ mt: 1 }}>
                     <Formik
-                        initialValues={editIndex !== null ? users[editIndex] : initialValues}
+                        initialValues={editUser}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -145,7 +205,7 @@ const AddProduct = () => {
                                     <Button type="submit" variant="contained" 
                                         sx={{ background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
-                                        {editIndex !== null ? "Update" : "Save"}
+                                        {editId !== null ? "Update" : "Save"}
                                     </Button>
                                 </DialogActions>
                             </Form>
@@ -216,7 +276,7 @@ const AddProduct = () => {
                                                     }
                                                 }}
                                             >
-                                            <IconButton onClick={() => handleDelete(index)}
+                                            <IconButton onClick={() => handleDelete(item)}
                                                     sx={{
                                                         background:"#fff", color: "#ef4444", transition: "0.2s",
                                                         "&:hover": { background: "#dc2626", color:"#fff" }
@@ -241,7 +301,7 @@ const AddProduct = () => {
                                                         background: "#fff", color:"#2563eb", transition: "0.2s",
                                                         "&:hover": { background: "#2563eb", color:"#fff" }
                                                     }}
-                                                    onClick={() => handleEdit(index)}
+                                                    onClick={() => handleEdit(item)}
                                                 >
                                                     <FaEdit />
                                                 </IconButton>
@@ -271,8 +331,7 @@ const AddProduct = () => {
                 <DialogActions>
                     <Button sx={{color:"#1e293b"}} onClick={() => dispatch(setDeleteOpen(false))}>Cancel</Button>
                     <Button onClick={confirmDelete} variant="contained"
-                        sx={{ background: "#ef4444", transition:"0.2s ease-in-out", 
-                            "&:hover": { background: "#fff", color: "#ef4444", fontWeight:600 } }}
+                        sx={{ background: "#ef4444" }}
                     >
                         Delete
                     </Button>
