@@ -5,7 +5,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Tab
 import AddIcon from "@mui/icons-material/Add";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { addProduct, deleteProduct, resetDeleteState, resetUIState, setDeleteId, 
+import { addProduct, deleteProduct, loadProducts, resetDeleteState, resetUIState, setDeleteId, 
     setDeleteOpen, setEditId, setOpen, setProducts, updateProduct,
 } from "./productSlice";
 import { useDispatch, useSelector } from "react-redux";
@@ -38,22 +38,26 @@ const AddProduct = () => {
     const headers = { Authorization: token, "Content-Type": "application/json" };
 
     // ---------- GET ----------
-    const fetchProducts = useCallback(() => {
-        axios.get("https://generateapi.techsnack.online/api/product", { 
-            headers: { Authorization: token, "Content-Type": "application/json" }
-        })
-        .then((getRes) => {
-            console.log("GET response:", getRes.data);
-            dispatch(setProducts(getRes.data.Data));
-        })
-        .catch((err) => {
-            console.error("GET error:", err);
-        })
-    }, [dispatch])
+    // const fetchProducts = useCallback(() => {
+    //     axios.get("https://generateapi.techsnack.online/api/product", { 
+    //         headers: { Authorization: token, "Content-Type": "application/json" }
+    //     })
+    //     .then((getRes) => {
+    //         console.log("GET response:", getRes.data);
+    //         dispatch(setProducts(getRes.data.Data));
+    //     })
+    //     .catch((err) => {
+    //         console.error("GET error:", err);
+    //     })
+    // }, [dispatch])
 
-    useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts])
+    // useEffect(() => {
+    //     if (products.length === 0) { fetchProducts() }
+    // }, [fetchProducts, products.length])
+
+     useEffect(() => {
+        dispatch(loadProducts());   // LOAD ON APP START
+    }, [dispatch]);
 
     // ---------- Submit ----------
     const handleSubmit = (values, { resetForm }) => {
@@ -87,7 +91,7 @@ const AddProduct = () => {
                 resetForm();
                 dispatch(resetUIState());
                 toast.success("Product Updated Successfully....");
-                fetchProducts();
+                // fetchProducts();
             })
             .catch(() => toast.error("Failed to Update Product!"))
         } else {
@@ -101,7 +105,7 @@ const AddProduct = () => {
                 toast.success("Product Added Successfully....");
                 resetForm();
                 dispatch(resetUIState());
-                fetchProducts();
+                // fetchProducts();
             })
             .catch(() => toast.error("Failed to Add Product!"))
         }
@@ -117,7 +121,7 @@ const AddProduct = () => {
             dispatch(deleteProduct(deleteId));
             dispatch(resetDeleteState());
             toast.success("Product Deleted Successfully....")
-            fetchProducts();
+            // fetchProducts();
         })
         .catch(() => toast.error("Failed to Delete Product!"))
     }
@@ -218,12 +222,13 @@ const AddProduct = () => {
                 <h3 style={{margin:0}}>Products ({products.length})</h3>
                 <p style={{ color: "#6b7280", margin: 0 }}> List of All Products </p> <br />
 
-                <TableContainer component={Paper} elevation={0}>
-                    <Table>
+                <TableContainer component={Paper} elevation={0} sx={{overflowX: "auto", maxWidth: 944}}>
+                    <Table sx={{width: "100%"}}>
                         <TableHead
                             sx={{ background: "#1e293b",
                                 "& .MuiTableCell-root": { color: "#fff", fontSize: "16px",
-                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)",
+                                    whiteSpace: "nowrap"
                                 }
                             }}
                         >
@@ -244,7 +249,8 @@ const AddProduct = () => {
                                 background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
                                 "& .MuiTableCell-root": { color: "#000", fontSize: "16px",
                                     borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5,
-                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)"
+                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)",
+                                    whiteSpace: "nowrap"
                                 }
                             }}
                         >

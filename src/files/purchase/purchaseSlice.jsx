@@ -1,56 +1,72 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-    list: JSON.parse(localStorage.getItem("purchase")) || [],
+    list: [],
     open: false,
-    editIndex: null,
     deleteOpen: false,
-    deleteIndex: null,
+    deleteId: null,
+    editId: null,
 };
 
 const purchaseSlice = createSlice({
     name: "purchase",
     initialState,
     reducers: {
+        // ================= UI STATE =================
         setOpen: (state, action) => {
             state.open = action.payload;
         },
-        setEditIndex: (state, action) => {
-            state.editIndex = action.payload
+        setEditId: (state, action) => {
+            state.editId = action.payload;
         },
         resetUIState: (state) => {
             state.open = false;
-            state.editIndex = null;
+            state.editId = null;
         },
 
         setDeleteOpen: (state, action) => {
-            state.deleteOpen = action.payload
+            state.deleteOpen = action.payload;
         },
-        setDeleteIndex: (state, action) => {
-            state.deleteIndex = action.payload
+        setDeleteId: (state, action) => {
+            state.deleteId = action.payload;
         },
         resetDeleteState: (state) => {
             state.deleteOpen = false;
-            state.deleteIndex = null
+            state.deleteId = null;
         },
-        
+
+        // ================= DATA STATE =================
+
+        // GET
+        setPurchase: (state, action) => {
+            state.list = action.payload;
+            localStorage.setItem("purchase", JSON.stringify(state.list));
+        },
+
+        // POST
         addPurchase: (state, action) => {
             state.list.push(action.payload);
             localStorage.setItem("purchase", JSON.stringify(state.list));
         },
-        updatePurchase: (state, action) => {
-            const { index, purchase } = action.payload;
-            state.list[index] = purchase;
-            localStorage.setItem("purchase", JSON.stringify(state.list));
-        },
-        deletePurchase: (state, action) => {
-            state.list.splice(action.payload, 1);
-            localStorage.setItem("purchase", JSON.stringify(state.list));
-        },
-    }
-})
 
-export const { setOpen, setEditIndex, resetUIState, setDeleteOpen, setDeleteIndex, 
-    resetDeleteState, addPurchase, updatePurchase, deletePurchase
- } = purchaseSlice.actions;
- export default purchaseSlice.reducer;
+        // DELETE
+        deletePurchase: (state, action) => {
+            state.list = state.list.filter((item) => item._id !== action.payload);
+            localStorage.setItem("purchase", JSON.stringify(state.list));
+        },
+
+        // Edit / PATCH
+        updatePurchase: (state, action) => {
+            const index = state.list.findIndex((item) => item._id === action.payload._id );
+            // findIndex return -1 if "not found"(the data)
+            if(index !== -1) state.list[index] = action.payload;
+            localStorage.setItem("purchase", JSON.stringify(state.list));
+        },
+    },
+});
+
+export const { setOpen, setEditId, resetUIState, setDeleteOpen, setDeleteId, resetDeleteState,
+    setPurchase, addPurchase, deletePurchase, updatePurchase
+} = purchaseSlice.actions;
+
+export default purchaseSlice.reducer;

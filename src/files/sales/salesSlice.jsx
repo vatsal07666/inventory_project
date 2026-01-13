@@ -3,9 +3,9 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     list: [],
     open: false,
-    editIndex: null,
+    editId: null,
     deleteOpen: false,
-    deleteIndex: null,
+    deleteId: null,
     billOpen: false,
     billData: null,
     itemDraft: []
@@ -15,30 +15,31 @@ const salesSlice = createSlice({
     name: "sales",
     initialState,
     reducers: {
+        // ================= UI STATE =================
         setOpen: (state, action) => {
             state.open = action.payload
         },
-        setEditIndex: (state, action) => {
-            state.editIndex = action.payload 
+        setEditId: (state, action) => {
+            state.editId = action.payload 
         },
         resetUIState: (state) => {
             state.open = false;
-            state.editIndex = null;
+            state.editId = null;
             state.itemDraft = [];
         },
 
         setDeleteOpen: (state, action) => {
             state.deleteOpen = action.payload
         },
-        setDeleteIndex: (state, action) => {
-            state.deleteIndex = action.payload
+        setDeleteId: (state, action) => {
+            state.deleteId = action.payload
         },
         resetDeleteState: (state) => {
             state.deleteOpen = false;
-            state.deleteIndex = null
+            state.deleteId = null
         },
 
-        /* ---------- BILL ---------- */
+        // ================= Bill =================
         setBillOpen: (state, action) => {
             state.billOpen = action.payload;
         },
@@ -46,7 +47,7 @@ const salesSlice = createSlice({
             state.billData = action.payload;
         },
 
-        /* ---------- ITEM DRAFT ---------- */
+        // ================= Item Draft =================
         addItemDraft: (state, action) => {
             state.itemDraft.push({
                 ...action.payload,
@@ -60,24 +61,38 @@ const salesSlice = createSlice({
             state.itemDraft = [];
         },
         
-        /* ---------- SALES CRUD ---------- */
+        // ================= DATA STATE =================
+
+        // GET
+        setSales: (state, action) => {
+            state.list = action.payload;
+            localStorage.setItem("sales", JSON.stringify(state.list));
+        },
+
+        // POST
         addSales: (state, action) => {
             state.list.push(action.payload);
             localStorage.setItem("sales", JSON.stringify(state.list));
         },
-        updateSales: (state, action) => {
-            const { index, sale } = action.payload;
-            state.list[index] = sale;
+
+        // DELETE
+        deleteSales: (state, action) => {
+            state.list = state.list.filter((item) => item._id !== action.payload);
             localStorage.setItem("sales", JSON.stringify(state.list));
         },
-        deleteSales: (state, action) => {
-            state.list.splice(action.payload, 1);
+
+        // Edit / PATCH
+        updateSales: (state, action) => {
+            const index = state.list.findIndex((item) => item._id === action.payload._id );
+            // findIndex return -1 if "not found"(the data)
+            if(index !== -1) state.list[index] = action.payload;
             localStorage.setItem("sales", JSON.stringify(state.list));
         },
     }
 })
 
-export const { setOpen, setEditIndex, resetUIState, setDeleteOpen, setDeleteIndex, resetDeleteState, setBillOpen, 
-    setBillData, addItemDraft, removeItemDraft, resetItemDraft, addSales, updateSales, deleteSales
+export const { setOpen, setEditId, resetUIState, setDeleteOpen, setDeleteId, 
+    resetDeleteState, setBillOpen, setBillData, addItemDraft, removeItemDraft, 
+    resetItemDraft, setSales, addSales, updateSales, deleteSales
  } = salesSlice.actions;
 export default salesSlice.reducer;

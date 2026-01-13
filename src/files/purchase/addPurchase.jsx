@@ -7,61 +7,139 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Tab
 import AddIcon from "@mui/icons-material/Add";
 import { FaEdit } from "react-icons/fa";
 import { RiDeleteBin6Line } from "react-icons/ri";
-import { addPurchase, deletePurchase, resetDeleteState, resetUIState, setDeleteIndex, 
-    setDeleteOpen, setEditIndex, setOpen, updatePurchase 
+import { addPurchase, deletePurchase, resetDeleteState, resetUIState, setDeleteId, setDeleteOpen, 
+    setEditId, setOpen, setPurchase, updatePurchase 
 } from "./purchaseSlice";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { useCallback, useEffect } from "react";
 
 const AddPurchase = () => {
-    const { list: purchases, open, editIndex, deleteOpen, deleteIndex } = useSelector((state) => state.purchase)
+    const { list: purchases = [], open, editId, deleteOpen, deleteId } = useSelector((state) => state.purchase)
     const dispatch = useDispatch();
 
     const categories = ["Electronics", "Home Appliances", "Fashion", "Sports"];
     const suppliers = ["Global Electronics Ltd", "Home Supply", "Fashion World Inc", "SportsPro Equipment"];
 
-    const initialValues = { product: "", category: "", purchaseDate: "", supplier: "", quantity: "", price: "" };
+    const initialValues = { product: "", category: "", date: "", supplier: "", quantity: "", price: "" };
     
     const validationSchema = Yup.object({
         product: Yup.string().required("Product is required*"),
         category: Yup.string().required("Category is required*"),
-        purchaseDate: Yup.date().required("Purchase Date is required*").max(new Date(), "Purchase date cannot be in the future*"),
+        date: Yup.date().required("Purchase Date is required*").max(new Date(), "Date cannot be in the future*"),
         supplier: Yup.string().required("Supplier is required*"),
         quantity: Yup.number().typeError("Quantity must be a number*").required("Quantity is Requaired*").min(0, "Quantity cannot be negative*"),
         price: Yup.number().typeError("Price must be a number*").required("Price is required*").min(0, "Price cannot be negative*"),
     });
 
+    const token = "1fRktRNtN4N7RR68";
+    const headers = { Authorization: token };
+
+    // ---------- GET ----------
+    const fetchPurchases = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/purchase", { 
+            headers: { Authorization: token }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setPurchase(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
+
+    useEffect(() => {
+        fetchPurchases()
+    }, [fetchPurchases])
+
+    const editPurchase = editId
+    ? {
+        ...purchases.find(item => item._id === editId),
+        date: purchases.find(item => item._id === editId)?.date?.split("T")[0] || ""
+    }
+    : initialValues;
+
+    // ---------- Submit ----------
     const handleSubmit = (values, { resetForm }) => {
-        const purchaseData = { 
-            ...values,
-            quantity: Number(values.quantity), 
-            price: Number(values.price), 
+        // show "Nothing Changed" toast If data not changed when update
+        const valuesChanged = (values, original) => {
+            return Object.keys(values).some((key) => {
+                if (key === "date") {
+                    return values.date !== original?.date?.split("T")[0];
+                }
+                return values[key] !== original[key];
+            });
         };
-    
-        if (editIndex !== null) {
-            dispatch(updatePurchase({ index: editIndex, purchase: purchaseData }));
-        } else {
-            dispatch(addPurchase(purchaseData));
+        if(editId !== null && !valuesChanged(values, editPurchase)){
+            toast.info("Nothing Changed!");
+            return;
         }
-    
-        resetForm();
-        dispatch(resetUIState())
+        
+        const formData = new FormData();
+        formData.append("product", values.product);
+        formData.append("category", values.category);
+        formData.append("date", values.date);
+        formData.append("supplier", values.supplier);
+        formData.append("quantity", values.quantity);
+        formData.append("price", values.price);
+
+        if(editId !== null) {
+            // ---------- PATCH ----------
+            axios.patch( `https://generateapi.techsnack.online/api/purchase/${editId}`, 
+                formData, { headers } 
+            )
+            .then((patchRes) => {
+                console.log("PATCH response:", patchRes.data);
+                dispatch(updatePurchase(patchRes.data.Data));
+                resetForm();
+                dispatch(resetUIState());
+                toast.success("Purchase Updated Successfully....");
+                fetchPurchases();
+            })
+            .catch(() => toast.error("Failed to Update Purchase!"))
+        } else {
+            // ---------- POST ----------
+            axios.post( "https://generateapi.techsnack.online/api/purchase", formData, 
+                {headers} 
+            )
+            .then((postRes) => {
+                console.log("POST response: ", postRes.data);
+                dispatch(addPurchase(postRes.data.Data));
+                toast.success("Purchase Added Successfully....");
+                resetForm();
+                dispatch(resetUIState());
+                fetchPurchases();
+            })
+            .catch(() => toast.error("Failed to Add Purchase!"))
+        }
     };
-    
-    const handleEdit = (index) => {
-        if (document.activeElement) document.activeElement.blur(); 
-        dispatch(setEditIndex(index));
-        dispatch(setOpen(true))
-    };
-    
-    const handleDelete = (index) => {
-        if (document.activeElement) document.activeElement.blur(); 
-        dispatch(setDeleteIndex(index));
-        dispatch(setDeleteOpen(true))
-    };
-    
-    
+
+    // ---------- DELETE ----------
     const confirmDelete = () => {
-        dispatch(deletePurchase(deleteIndex));
-        dispatch(resetDeleteState())
+        if (document.activeElement) document.activeElement.blur();
+        axios.delete( `https://generateapi.techsnack.online/api/purchase/${deleteId}`, 
+            { headers } 
+        )
+        .then(() => {
+            dispatch(deletePurchase(deleteId));
+            dispatch(resetDeleteState());
+            toast.success("Purchase Deleted Successfully....")
+            fetchPurchases();
+        })
+        .catch(() => toast.error("Failed to Delete Purchase!"))
+    }
+
+    const handleDelete = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setDeleteOpen(true));
+        dispatch(setDeleteId(item._id));
+    }
+
+    const handleEdit = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true));
+        dispatch(setEditId(item._id));
     }
 
     const handleOpenDialog = () => { 
@@ -85,13 +163,13 @@ const AddPurchase = () => {
             {/* POPUP FORM */}
             <Dialog open={open} onClose={() => dispatch(resetUIState())} sx={{zIndex:2000}} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ fontWeight: 700 }}>
-                    {editIndex !== null ? "Edit Purchase Details" : "Add Purchase Details"}
+                    {editId !== null ? "Edit Purchase Details" : "Add Purchase Details"}
                 </DialogTitle>
 
                 <Divider />
 
                 <DialogContent sx={{ mt: 1 }}>
-                    <Formik initialValues={editIndex !== null ? purchases[editIndex] : initialValues}
+                    <Formik initialValues={editPurchase}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -142,11 +220,11 @@ const AddPurchase = () => {
                                     {/* Purchase Date */}
                                     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
                                         <label style={{ fontWeight: 600 }}>Purchase Date</label>
-                                        <Field name="purchaseDate" type="date"
+                                        <Field name="date" type="date"
                                             style={{ padding: "12px 14px", border: "1px solid #ccc", 
                                                 borderRadius: "8px", fontSize: "16px" }}
                                         />
-                                        <ErrorMessage name="purchaseDate" component="small" style={{ color: "red", fontWeight: 600 }} />
+                                        <ErrorMessage name="date" component="small" style={{ color: "red", fontWeight: 600 }} />
                                     </Box>
 
                                     {/* Quantity */}
@@ -175,7 +253,7 @@ const AddPurchase = () => {
                                     <Button type="submit" variant="contained"
                                         sx={{ background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
-                                        {editIndex !== null ? "Update" : "Save"}
+                                        {editId !== null ? "Update" : "Save"}
                                     </Button>
                                 </DialogActions>
                             </Form>
@@ -193,12 +271,13 @@ const AddPurchase = () => {
                 <h3 style={{margin:0}}>Purchases ({purchases.length})</h3>
                 <p style={{ color: "#6b7280", margin: 0 }}> List of All Purchases </p> <br />
 
-                <TableContainer component={Paper} elevation={0}>
-                    <Table>
+                <TableContainer component={Paper} elevation={0} sx={{overflowX: "auto", maxWidth: 944}}>
+                    <Table sx={{width: "100%"}}>
                         <TableHead
                             sx={{ background: "#1e293b",
-                                "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", 
-                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+                                "& .MuiTableCell-root": { color: "#fff", fontSize: "16px",
+                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)", 
+                                    whiteSpace:"nowrap"
                                 }
                             }}
                         >
@@ -216,9 +295,10 @@ const AddPurchase = () => {
                         <TableBody
                             sx={{
                                 background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
-                                "& .MuiTableCell-root": { color: "#000000ff", fontSize: "15px",
+                                "& .MuiTableCell-root": { color: "#000000ff", fontSize: "16px",
                                     borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5,
-                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)"
+                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)", 
+                                    whiteSpace: "nowrap"
                                 }
                             }}
                         >
@@ -236,7 +316,7 @@ const AddPurchase = () => {
                                     <TableCell>{item.supplier}</TableCell>
                                     <TableCell>{item.quantity}</TableCell>
                                     <TableCell>₹ {item.price}</TableCell>
-                                    <TableCell>{item.purchaseDate}</TableCell>
+                                    <TableCell>{item.date ? item.date.split("T")[0] : ""}</TableCell>
                                     <TableCell>
                                         <Box sx={{display:"flex", gap: 1}}>
                                             {/* Delete */}
@@ -249,7 +329,7 @@ const AddPurchase = () => {
                                                     }
                                                 }}
                                             >
-                                            <IconButton onClick={() => handleDelete(index)}
+                                            <IconButton onClick={() => handleDelete(item)}
                                                     sx={{
                                                         background:"#fff", color: "#ef4444", transition: "0.2s",
                                                         "&:hover": { background: "#dc2626", color:"#fff" }
@@ -274,7 +354,7 @@ const AddPurchase = () => {
                                                         background: "#fff", color:"#2563eb", transition: "0.2s",
                                                         "&:hover": { background: "#2563eb", color:"#fff" }
                                                     }}
-                                                    onClick={() => handleEdit(index)}
+                                                    onClick={() => handleEdit(item)}
                                                 >
                                                     <FaEdit />
                                                 </IconButton>
@@ -304,8 +384,7 @@ const AddPurchase = () => {
                 <DialogActions>
                     <Button sx={{color:"#1e293b"}} onClick={() => dispatch(setDeleteOpen(false))}>Cancel</Button>
                     <Button onClick={confirmDelete} variant="contained"
-                        sx={{ background: "#ef4444", transition:"0.2s ease-in-out", 
-                            "&:hover": { background: "#fff", color: "#ef4444", fontWeight:600 } }}
+                        sx={{ background: "#ef4444" }}
                     >
                         Delete
                     </Button>

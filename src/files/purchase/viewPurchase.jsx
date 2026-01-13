@@ -1,7 +1,6 @@
 import { Table, TableHead, TableRow, TableCell, TableBody, Paper, TableContainer } from "@mui/material";
 import { useSelector } from "react-redux";
 
-
 const ViewPurchase = () => {
     const { list: purchases } = useSelector((state) => state.purchase);
 
@@ -10,11 +9,15 @@ const ViewPurchase = () => {
             <h3 style={{margin:0}}>Purchases ({purchases.length})</h3>
             <p style={{ color: "#6b7280", margin: 0 }}> List of All Purchases </p> <br />
 
-            <TableContainer>
-                <Table>
+            <TableContainer sx={{overflowX: "auto", maxWidth: 944}}>
+                <Table sx={{width: "100%"}}>
                     <TableHead sx={{ background: "#1e293b",
-                            "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", fontWeight: 600 }
-                        }}>
+                            "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", 
+                                fontWeight: 600, borderRight: "1px solid rgba(255, 255, 255, 0.1)",
+                                whiteSpace: "nowrap"
+                            }
+                        }}
+                    >
                         <TableRow>
                             <TableCell>Product</TableCell>
                             <TableCell>Category</TableCell>
@@ -28,13 +31,15 @@ const ViewPurchase = () => {
                     <TableBody sx={{
                             background: "linear-gradient(180deg,#F9F9FB 0%, #f3f3f3ff 100%)",
                             "& .MuiTableCell-root": { color: "#000000ff", fontSize: "16px",
-                                borderBottom: "1px solid rgba(0, 0, 0, 0.2)"
+                                borderBottom: "1px solid rgba(0, 0, 0, 0.2)",
+                                whiteSpace: "nowrap"
                             }
-                        }}>
+                        }}
+                    >
                         {purchases.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 10 }}>
-                                No purchases added yet
+                                    No purchases added yet
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -45,7 +50,7 @@ const ViewPurchase = () => {
                                         <TableCell>{item.supplier}</TableCell>
                                         <TableCell>{item.quantity}</TableCell>
                                         <TableCell>₹ {item.price}</TableCell>
-                                        <TableCell>{item.purchaseDate}</TableCell>
+                                        <TableCell>{item.date ? item.date.split("T")[0] : ""}</TableCell>
                                     </TableRow>
                                 ))
                             )

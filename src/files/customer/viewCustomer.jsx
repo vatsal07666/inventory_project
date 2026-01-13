@@ -10,10 +10,13 @@ const ViewCustomer = () => {
             <h3 style={{margin:0}}>Customers ({customers.length})</h3>
             <p style={{ color: "#6b7280", margin: 0 }}> List of All Customers </p> <br />
 
-            <TableContainer>
-                <Table>
+            <TableContainer sx={{overflowX: "auto", maxWidth: 944}}>
+                <Table sx={{width: "100%"}}>
                     <TableHead sx={{ background: "#1e293b",
-                            "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", fontWeight: 600 }
+                            "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", 
+                                fontWeight: 600, borderRight: "1px solid rgba(255, 255, 255, 0.1)",
+                                whiteSpace: "nowrap" 
+                            }
                         }}>
                         <TableRow>
                             <TableCell>Customer Name</TableCell>
@@ -26,7 +29,9 @@ const ViewCustomer = () => {
                     <TableBody sx={{
                             background: "linear-gradient(180deg,#F9F9FB 0%, #f3f3f3ff 100%)",
                             "& .MuiTableCell-root": { color: "#000000ff", fontSize: "16px",
-                                borderBottom: "1px solid rgba(0, 0, 0, 0.2)"
+                                borderBottom: "1px solid rgba(0, 0, 0, 0.2)",
+                                borderRight: "1px solid rgba(126, 126, 126, 0.1)",
+                                whiteSpace: "nowrap"
                             }
                         }}>
                         {customers.length === 0 ? (

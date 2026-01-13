@@ -10,11 +10,14 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
 import { addItemDraft, addSales, deleteSales, removeItemDraft, resetDeleteState, resetItemDraft, resetUIState, setBillData, setBillOpen, 
-    setDeleteIndex, setDeleteOpen, setEditIndex, setOpen, updateSales 
+    setDeleteId, setDeleteOpen, setEditId, setOpen, setSales, updateSales 
 } from "./salesSlice";
+import React, { useCallback, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const AddSales = () => {
-    const { list: sales, open, editIndex, deleteOpen, deleteIndex, billOpen, billData, itemDraft } = useSelector((state) => state.sales);
+    const { list: sales = [], open, editId, deleteOpen, deleteId, billOpen, billData, itemDraft = [] } = useSelector((state) => state.sales);
     const dispatch = useDispatch();
 
     const initialValues = { 
@@ -36,9 +39,8 @@ const AddSales = () => {
         method: Yup.string().required("Method is required*"),
     });
 
-    const generateRandomInvoice = (length = 6) =>
-        `INV-${Array.from({ length }, () => 
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".charAt(Math.floor(Math.random() * 36))).join('')}`;
+    const generateRandomInvoice = () =>
+    `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     // Add new item inside formValues.items[]
     const handleAddItem = (values, { setFieldValue }) => {
@@ -64,65 +66,153 @@ const AddSales = () => {
     };
 
     // Subtotal
-    const computeSubtotal = (items) => {  
-        return items.reduce((acc, i) => acc + Number(i.quantity || 0) * Number(i.unitprice || 0),0);
+    const computeSubtotal = (items) =>
+        items.reduce((sum, i) => sum + Number(i.quantity) * Number(i.unitprice), 0);
+
+    const token = "A6vqPqqhKHbg4aSl";
+    const headers = { Authorization: token };
+
+    // ---------- GET ----------
+    const fetchSales = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/sales", { 
+            headers: { Authorization: token }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setSales(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
+
+    useEffect(() => {
+        fetchSales()
+    }, [fetchSales])
+
+    const editSales = editId
+    ? {
+        ...initialValues, // Ensures all fields exist
+        ...(sales.find(s => s._id === editId) || {}), // Finds the exact sale object being edited
+        date: sales.find(s => s._id === editId).date.split("T")[0] // date = yyyy-mm-dd
     }
+    : initialValues;
+
 
     const handleSubmit = (values, { resetForm }) => {
-        if (itemDraft.length === 0) {
+        if (!itemDraft.length) {
             alert("Add at least one item");
             return;
         }
 
-        const salesData = { 
-            ...values, 
-            items: itemDraft, 
-            subtotal: computeSubtotal(itemDraft),
-            invoice: generateRandomInvoice()
-        };
+        // show "Nothing Changed" toast If data not changed when update
+        // itemsChanged check if itemDraft data are same or not
+        const itemsChanged =
+            JSON.stringify(itemDraft) !== JSON.stringify(editSales?.items || []);
 
-        if (editIndex !== null) {
-            dispatch(updateSales({ index: editIndex, sale: salesData }));
-        } else {
-            dispatch(addSales(salesData));
+        // valuesChanged checks if data are same or not
+        const valuesChanged = Object.keys(initialValues).some(
+            key => values[key] !== editSales?.[key]
+        );
+
+        if (editId && !itemsChanged && !valuesChanged) {
+            toast.info("Nothing Changed");
+            return;
         }
 
-        resetForm({ values: {...values, product:"", quantity:"", unitprice:""} });
-        dispatch(resetItemDraft())
-        dispatch(resetUIState())
+        const formData = new FormData();
+        formData.append("customer", values.customer);
+        formData.append("email", values.email);
+        formData.append("phone", Number(values.phone));
+        formData.append("address", values.address);
+        formData.append("date", values.date);
+        formData.append("method", values.method);
+        formData.append("status", values.status);
+        formData.append("items", JSON.stringify(itemDraft));
+        formData.append("subtotal", computeSubtotal(itemDraft));
+        formData.append("invoice", editId ? editSales.invoice : generateRandomInvoice());
+
+        if(editId !== null) {
+            // ---------- PATCH ----------
+            axios.patch( `https://generateapi.techsnack.online/api/sales/${editId}`, 
+                formData, { headers } 
+            )
+            .then((patchRes) => {
+                console.log("PATCH response:", patchRes.data);
+                dispatch(updateSales(patchRes.data.Data));
+                resetForm();
+                dispatch(resetUIState());
+                toast.success("Sales Updated Successfully....");
+                fetchSales();
+            })
+            .catch(() => toast.error("Failed to Update Sales!"))
+        } else {
+            // ---------- POST ----------
+            axios.post( "https://generateapi.techsnack.online/api/sales", formData,
+                {headers} 
+            )
+            .then((postRes) => {
+                console.log("POST response: ", postRes.data);
+                dispatch(addSales(postRes.data.Data));
+                toast.success("Sales Added Successfully....");
+                resetForm();
+                dispatch(resetUIState());
+                fetchSales();
+            })
+            .catch(() => toast.error("Failed to Add Sales!"))
+        }
     };
 
-    const handleEdit = (index) => { 
+    // ---------- DELETE ----------
+    const confirmDelete = () => {
         if (document.activeElement) document.activeElement.blur();
-        dispatch(setEditIndex(index));
+        axios.delete( `https://generateapi.techsnack.online/api/sales/${deleteId}`, 
+            { headers } 
+        )
+        .then(() => {
+            dispatch(deleteSales(deleteId));
+            dispatch(resetDeleteState());
+            toast.success("Sales Deleted Successfully....")
+            fetchSales();
+        })
+        .catch(() => toast.error("Failed to Delete Sales!"))
+    }
+
+    const handleDelete = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setDeleteOpen(true));
+        dispatch(setDeleteId(item._id));
+    }
+
+    const handleEdit = (item) => {
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setEditId(item._id));
         dispatch(setOpen(true));
-        
+
         // Pre-fill itemDraft for editing
         dispatch(resetItemDraft());
-        sales[index].items.forEach(item => dispatch(addItemDraft(item)));
-    };
+        const safeItems = Array.isArray(item.items)
+            ? item.items
+            : JSON.parse(item.items || "[]"); // converts into array if string
 
-    const handleDelete = (index) => { 
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setDeleteIndex(index));
-        dispatch(setDeleteOpen(true))
-    };
-
-    const confirmDelete = () => {
-        dispatch(deleteSales(deleteIndex));
-        dispatch(resetDeleteState())
+        safeItems.forEach(it => dispatch(addItemDraft(it)));
     }
+
+    const handleOpenDialog = () => { 
+        if (document.activeElement) document.activeElement.blur();
+        dispatch(setOpen(true)) 
+    };
 
     const handleOpenBill = (data) => {
         if (document.activeElement) document.activeElement.blur();
         dispatch(setBillData({ ...data}));
         dispatch(setBillOpen(true));
     };
-
-    const handleOpenDialog = () => { 
-        if (document.activeElement) document.activeElement.blur();
-        dispatch(setOpen(true)) 
-    };
+    
+    const itemsSubtotal = itemDraft.reduce(
+        (sum, items) => sum + Number(items.quantity) * Number(items.unitprice),
+        0
+    );
 
     return(
         <Box id="root">
@@ -144,7 +234,7 @@ const AddSales = () => {
                         alignItems: "center"
                     }}
                 >
-                    {editIndex !== null ? "Edit Sales Details" : "Add New Sales"}
+                    {editId !== null ? "Edit Sales Details" : "Add New Sales"}
 
                     <IconButton onClick={() => dispatch(resetUIState())}>
                         <RxCrossCircled />
@@ -155,9 +245,7 @@ const AddSales = () => {
 
                 <DialogContent sx={{ mt: 1, background:"#f5f7fa" }}>
                     <Formik 
-                        initialValues={
-                            editIndex !== null ? sales[editIndex] : initialValues
-                        }
+                        initialValues={editSales}
                         validationSchema={validationSchema}
                         onSubmit={handleSubmit}
                         enableReinitialize
@@ -182,7 +270,7 @@ const AddSales = () => {
 
                                     <Table>
                                         <TableHead sx={{ 
-                                                "& .MuiTableCell-root": { color: "#000", fontSize: "15px" }
+                                                "& .MuiTableCell-root": { color: "#000", fontSize: "16px" }
                                             }}
                                         >
                                             <TableRow>
@@ -248,11 +336,16 @@ const AddSales = () => {
                                                         </IconButton>
                                                         </Tooltip>
                                                     </TableCell>
-                                                    <TableCell>
-                                                        
-                                                    </TableCell>
                                                 </TableRow>
                                             ))}
+                                            <TableRow>
+                                                <TableCell colSpan={3} align="right" sx={{ fontSize: "16px" }}>
+                                                    <strong>Subtotal:</strong>
+                                                </TableCell>
+                                                <TableCell sx={{ fontSize: "16px" }}>
+                                                    <b>₹ {itemsSubtotal}</b>
+                                                </TableCell>
+                                            </TableRow>
                                         </TableBody>
                                     </Table>
                                 </Paper>
@@ -372,7 +465,7 @@ const AddSales = () => {
                                     <Button type="submit" variant="contained"
                                         sx={{ background: "#1e293b", "&:hover": { background: "#0f172a" } }}
                                     >
-                                        {editIndex !== null ? "Update" : "Save"}
+                                        {editId !== null ? "Update" : "Save"}
                                     </Button>
                                 </DialogActions>
                             </Form>
@@ -388,16 +481,16 @@ const AddSales = () => {
     
             <Paper sx={{ p: 3, borderRadius: 3 }}>
     
-                <h3 style={{ marginBottom: 0 }}>Sales ({sales.length})</h3>
+                <h3 style={{ margin: 0 }}>Sales ({sales.length})</h3>
                 <p style={{ color: "#6b7280" }}>
                     List of all sales transactions
                 </p>
 
-                <TableContainer>
-                    <Table>
+                <TableContainer sx={{overflowX: "auto", maxWidth: 944}}>
+                    <Table sx={{width: "100%"}}>
                         <TableHead sx={{ background: "#1e293b",
                                 "& .MuiTableCell-root": { color: "#fff", fontSize: "15px", 
-                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)", whiteSpace: "nowrap"
                                 }
                             }}
                         >
@@ -416,9 +509,10 @@ const AddSales = () => {
 
                         <TableBody
                             sx={{ background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
-                                "& .MuiTableCell-root": { color: "#000000ff", fontSize: "15px",
-                                    borderBottom: "1px solid rgba(0, 0, 0, 0.2)", letterSpacing: 0.5,
-                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)"
+                                "& .MuiTableCell-root": { color: "#000000ff", fontSize: "16px",
+                                    borderBottom: "1px solid rgba(0, 0, 0, 0.2)",
+                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)",
+                                    whiteSpace: "nowrap"
                                 }
                             }}
                         >
@@ -429,126 +523,145 @@ const AddSales = () => {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                sales.map((item, index) => (
-                                    <TableRow key={index}>
+                                sales.map((item, index) => {
+                                    // Parse items if it's a string
+                                    const itemsList = typeof item.items === 'string' 
+                                        ? JSON.parse(item.items || "[]") // converts string to array
+                                        : (Array.isArray(item.items) ? item.items : []);
+                                    
+                                    return (
+                                        <TableRow key={item._id ?? index}>
 
-                                        {/* Invoice Number */}
-                                        <TableCell>
-                                            <strong>{item.invoice}</strong>
-                                        </TableCell>
+                                            {/* Invoice Number */}
+                                            <TableCell style={{whiteSpace: "nowrap"}}>
+                                                <strong>{item.invoice}</strong>
+                                            </TableCell>
 
-                                        {/* Customer */}
-                                        <TableCell>
-                                            <b>{item.customer}</b> <br />
-                                            <small style={{ color: "#6b7280" }}> {item.email} </small>
-                                        </TableCell>
+                                            {/* Customer */}
+                                            <TableCell>
+                                                <b>{item.customer}</b> <br />
+                                                <small style={{ color: "#6b7280" }}> {item.email} </small>
+                                            </TableCell>
 
-                                        {/* Items */}
-                                        <TableCell>
-                                            {item.items.length} item(s) <br />
-                                            <span style={{ color: "#6b7280" }}>
-                                                {item.items.map(i => i.product).join(",")}
-                                            </span>
-                                        </TableCell>
+                                            {/* Items */}
+                                            <TableCell >
+                                                {/* {itemsList.length} item(s) <br />
+                                                <span style={{ color: "#6b7280" }}>
+                                                    {itemsList.map(i => i.product).join(", ")}
+                                                    (<small>x</small>{itemsList.map(i => i.quantity).join(", ")})
+                                                </span> */}
+                                                {itemsList.length} item(s) <br />
+                                                <span style={{ color: "#6b7280" }}>
+                                                    {itemsList.map((item, idx) => (
+                                                        <React.Fragment key={idx}>
+                                                            {item.product}(<small>x{item.quantity}</small>)
+                                                            {idx < itemsList.length ? ", " : ""}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </span>
 
-                                        {/* Unit Price */}
-                                        <TableCell>₹ {item.items.map(i => i.unitprice).join(", ")}</TableCell>
+                                            </TableCell>
 
-                                        {/* Total Price */}
-                                        <TableCell>₹ {item.subtotal}</TableCell>
+                                            {/* Unit Price */}
+                                            <TableCell>
+                                                ₹ {itemsList.map(i => i.unitprice).join(", ₹ ")}
+                                            </TableCell>
 
-                                        {/* Payment In */}
-                                        <TableCell>
-                                            <span style={{ background: "#e5e7eb", padding: "4px 10px", borderRadius: "20px",
-                                                    fontSize: "13px"
-                                                }}
-                                            >
-                                                {item.method}
-                                            </span>
-                                        </TableCell>
+                                            {/* Total Price */}
+                                            <TableCell>₹ {item.subtotal}</TableCell>
 
-                                        {/* Payment Status */}
-                                        <TableCell>
-                                            <span style={{ background: item.status === "Paid" ? "#22c55e" : "#f96216ff",
-                                                    padding: "4px 10px", borderRadius: "20px", fontSize: "13px", color: "#fff"
-                                                }}
-                                            >
-                                                {item.status}
-                                            </span>
-                                        </TableCell>
-
-                                        {/* Date */}
-                                        <TableCell> {item.date} </TableCell>
-
-                                        {/* Actions */}
-                                        <TableCell>
-                                            <Box sx={{display:"flex", gap: 1}}>
-                                                {/* View Bill */}
-                                                <Tooltip title="View Invoice" component={Paper} 
-                                                    slotProps={{
-                                                        tooltip: {
-                                                            sx:{ fontSize: "12px", px: 2, color:"#16a34a", background: "#e5ffeeff",
-                                                                letterSpacing: 1, fontWeight: 600
-                                                            }
-                                                        }
+                                            {/* Payment In */}
+                                            <TableCell>
+                                                <span style={{ background: "#e5e7eb", padding: "4px 10px", borderRadius: "20px",
+                                                        fontSize: "13px"
                                                     }}
                                                 >
-                                                    <IconButton onClick={() => handleOpenBill(item)}
-                                                        sx={{
-                                                            background:"#fff", color: "#16a34a", transition: "0.2s ease-in-out",
-                                                            "&:hover": { background: "#16a34a", color:"#fff" }
-                                                        }}    
-                                                    > 
-                                                        <FiEye /> 
-                                                    </IconButton>
-                                                </Tooltip>
+                                                    {item.method}
+                                                </span>
+                                            </TableCell>
 
-                                                {/* Delete */}
-                                                <Tooltip title="Delete" component={Paper}
-                                                    slotProps={{
-                                                        tooltip: {
-                                                            sx:{ fontSize: "12px", px: 2, color:"#ef4444", background: "#ffddddff",
-                                                                letterSpacing: 1, fontWeight: 600
-                                                            }
-                                                        }
+                                            {/* Payment Status */}
+                                            <TableCell>
+                                                <span style={{ background: item.status === "Paid" ? "#22c55e" : "#f96216ff",
+                                                        padding: "4px 10px", borderRadius: "20px", fontSize: "13px", color: "#fff"
                                                     }}
                                                 >
-                                                <IconButton onClick={() => handleDelete(index)}
-                                                        sx={{
-                                                            background:"#fff", color: "#ef4444", transition: "0.2s",
-                                                            "&:hover": { background: "#dc2626", color:"#fff" }
+                                                    {item.status}
+                                                </span>
+                                            </TableCell>
+
+                                            {/* Date */}
+                                            <TableCell> {item.date ? item.date.split("T")[0] : ""} </TableCell>
+
+                                            {/* Actions */}
+                                            <TableCell>
+                                                <Box sx={{display:"flex", gap: 1}}>
+                                                    {/* View Bill */}
+                                                    <Tooltip title="View Invoice" component={Paper} 
+                                                        slotProps={{
+                                                            tooltip: {
+                                                                sx:{ fontSize: "12px", px: 2, color:"#16a34a", background: "#e5ffeeff",
+                                                                    letterSpacing: 1, fontWeight: 600
+                                                                }
+                                                            }
                                                         }}
                                                     >
-                                                        <RiDeleteBin6Line />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                        <IconButton onClick={() => handleOpenBill(item)}
+                                                            sx={{
+                                                                background:"#fff", color: "#16a34a", transition: "0.2s ease-in-out",
+                                                                "&:hover": { background: "#16a34a", color:"#fff" }
+                                                            }}    
+                                                        > 
+                                                            <FiEye /> 
+                                                        </IconButton>
+                                                    </Tooltip>
 
-                                                {/* Edit */}
-                                                <Tooltip title="Edit" component={Paper}
-                                                    slotProps={{
-                                                        tooltip: {
-                                                            sx:{ fontSize: "12px", px: 2, color:"#2563eb", background: "#dee9ffff",
-                                                                letterSpacing: 1, fontWeight: 600
+                                                    {/* Delete */}
+                                                    <Tooltip title="Delete" component={Paper}
+                                                        slotProps={{
+                                                            tooltip: {
+                                                                sx:{ fontSize: "12px", px: 2, color:"#ef4444", background: "#ffddddff",
+                                                                    letterSpacing: 1, fontWeight: 600
+                                                                }
                                                             }
-                                                        }
-                                                    }}
-                                                >
-                                                <IconButton
-                                                        sx={{
-                                                            background: "#fff", color:"#2563eb", transition: "0.2s",
-                                                            "&:hover": { background: "#2563eb", color:"#fff" }
                                                         }}
-                                                        onClick={() => handleEdit(index)}
                                                     >
-                                                        <FaEdit />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </Box>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                                    <IconButton onClick={() => handleDelete(item)}
+                                                            sx={{
+                                                                background:"#fff", color: "#ef4444", transition: "0.2s",
+                                                                "&:hover": { background: "#dc2626", color:"#fff" }
+                                                            }}
+                                                        >
+                                                            <RiDeleteBin6Line />
+                                                        </IconButton>
+                                                    </Tooltip>
+
+                                                    {/* Edit */}
+                                                    <Tooltip title="Edit" component={Paper}
+                                                        slotProps={{
+                                                            tooltip: {
+                                                                sx:{ fontSize: "12px", px: 2, color:"#2563eb", background: "#dee9ffff",
+                                                                    letterSpacing: 1, fontWeight: 600
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                    <IconButton
+                                                            sx={{
+                                                                background: "#fff", color:"#2563eb", transition: "0.2s",
+                                                                "&:hover": { background: "#2563eb", color:"#fff" }
+                                                            }}
+                                                            onClick={() => handleEdit(item)}
+                                                        >
+                                                            <FaEdit />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
-
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -583,6 +696,7 @@ const AddSales = () => {
                                         <h3>Sales Summary : -</h3>
                                         <Box sx={{ display: "flex", justifyContent: "space-between"}}>
                                             <Box sx={{color:"#555"}}>
+                                                <p><strong>Invoice</strong></p>
                                                 <p><strong>Status</strong></p>
                                                 <p><strong>Total Amount:</strong></p>
                                                 <p><strong>Payment Method:</strong></p>
@@ -590,53 +704,75 @@ const AddSales = () => {
                                                 <p><strong>Date:</strong></p>
                                             </Box>
                                             <Box sx={{color:"#555"}}>
+                                                <p>{billData.invoice}</p>
                                                 <p>{billData.status}</p>
                                                 <p>₹ {billData.subtotal}</p>
                                                 <p>{billData.method}</p>
-                                                <p>{billData.status}</p>
-                                                <p>{billData.date}</p>
+                                                <p style={{ background: billData.status === "Paid" ? "#22c55e" : "#f96216ff",
+                                                        padding: "4px 10px", fontWeight: 600, borderRadius: "20px", fontSize: "13px",
+                                                        color: "#fff", display:"inline"
+                                                    }}
+                                                >
+                                                    {billData.status}
+                                                </p>
+                                                <p>{billData.date.split("T")[0]}</p>
                                             </Box>
                                         </Box>
                                     </Box>  
                                 </Box>
 
                                 <Box sx={{ borderRadius: 3, py: 1, px: 2, mt: 3 }} component={Paper}>
-                                    <h3 style={{ marginBottom: 0 }}>Items ({billData.items.length})</h3>
-                                    <p style={{ marginTop: "5px", color: "#6b7280" }}>
-                                        List of all sales transactions
-                                    </p>
+                                    {/* Safely parse items */}
+                                    {(() => {
+                                        const billItems =
+                                            typeof billData.items === "string"
+                                                ? JSON.parse(billData.items || "[]")
+                                                : Array.isArray(billData.items) ? billData.items : [];
 
-                                    <Table>
-                                        <TableHead sx={{ background: "#f1f5f9" }}>
-                                            <TableRow>
-                                            <TableCell><strong>Product</strong></TableCell>
-                                            <TableCell><strong>Quantity</strong></TableCell>
-                                            <TableCell><strong>Unit Price</strong></TableCell>
-                                            <TableCell><strong>Total Price</strong></TableCell>
-                                            </TableRow>
-                                        </TableHead>
+                                        return (
+                                            <>
+                                                <h3 style={{ marginBottom: 0 }}>
+                                                Items {(billItems ? billItems.length : 0)}
+                                            </h3>
+                                            <p style={{ marginTop: "5px", color: "#6b7280" }}>
+                                                List of all sales items in this invoice
+                                            </p>
+                                            <Table>
+                                                <TableHead sx={{ background: "#f1f5f9" }}>
+                                                    <TableRow>
+                                                        <TableCell><strong>Product</strong></TableCell>
+                                                        <TableCell><strong>Quantity</strong></TableCell>
+                                                        <TableCell><strong>Unit Price</strong></TableCell>
+                                                        <TableCell><strong>Total Price</strong></TableCell>
+                                                    </TableRow>
+                                                </TableHead>
 
-                                        <TableBody>
-                                            {billData.items.map((it, idx) => (
-                                                <TableRow key={idx}>
-                                                    <TableCell>{it.product}</TableCell>
-                                                    <TableCell>{it.quantity}</TableCell>
-                                                    <TableCell>₹ {it.unitprice}</TableCell>
-                                                    <TableCell>₹ {it.total}</TableCell>
-                                                </TableRow>
-                                            ))}
+                                                <TableBody>
+                                                    {billItems.map((it, idx) => (
+                                                        <TableRow key={idx}>
+                                                        <TableCell>{it.product}</TableCell>
+                                                        <TableCell>{it.quantity}</TableCell>
+                                                        <TableCell>₹ {it.unitprice}</TableCell>
+                                                        <TableCell>
+                                                            ₹ {it.total ?? it.quantity * it.unitprice}
+                                                        </TableCell>
+                                                        </TableRow>
+                                                    ))}
 
-                                            {/* Total row */}
-                                            <TableRow>
-                                                <TableCell colSpan={3} align="right" sx={{fontSize: "16px"}}>
-                                                    <strong>Total:</strong>
-                                                </TableCell>
-                                                <TableCell sx={{fontSize: "16px"}}>
-                                                    <b>₹ {billData.subtotal}</b>
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
+                                                    {/* Total row */}
+                                                    <TableRow>
+                                                        <TableCell colSpan={3} align="right" sx={{ fontSize: "16px" }}>
+                                                            <strong>Total:</strong>
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: "16px" }}>
+                                                            <b>₹ {billData.subtotal}</b>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                            </>
+                                        );
+                                    })()}
                                 </Box>
 
                                 <Divider sx={{ my: 2 }} />
@@ -674,8 +810,7 @@ const AddSales = () => {
                 <DialogActions>
                     <Button sx={{color:"#1e293b"}} onClick={() => dispatch(setDeleteOpen(false))}>Cancel</Button>
                     <Button onClick={confirmDelete} variant="contained"
-                        sx={{ background: "#ef4444", transition:"0.2s ease-in-out", 
-                            "&:hover": { background: "#fff", color: "#ef4444", fontWeight:600 } }}
+                        sx={{ background: "#ef4444" }}
                     >
                         Delete
                     </Button>

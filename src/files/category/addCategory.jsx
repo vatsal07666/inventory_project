@@ -46,8 +46,8 @@ const AddCategory = () => {
     }, [dispatch])
 
     useEffect(() => {
-        fetchCategories()
-    }, [fetchCategories])
+        if (categories.length === 0) { fetchCategories() }
+    }, [fetchCategories, dispatch, categories.length])
 
     // ---------- Submit ----------
     const handleSubmit = (values, { resetForm }) => {

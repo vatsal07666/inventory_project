@@ -26,13 +26,16 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from './files/theme'
 import { Provider } from "react-redux";
 import store from "./files/store"
+import { SnackbarProvider } from './files/login/snackbarContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <BrowserRouter>
     <ThemeProvider theme={theme}>
       <Provider store={store}>
-        <App />
+        <SnackbarProvider>
+          <App />
+        </SnackbarProvider>
       </Provider>
     </ThemeProvider>
   </BrowserRouter>

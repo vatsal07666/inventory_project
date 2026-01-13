@@ -222,12 +222,13 @@ const AddCustomer = () => {
                 <h3 style={{margin:0}}>Customers ({customers.length})</h3>
                 <p style={{ color: "#6b7280", margin: 0 }}> List of All Customers </p> <br />
 
-                <TableContainer component={Paper} elevation={0}>
-                    <Table>
+                <TableContainer component={Paper} elevation={0} sx={{overflowX: "auto", maxWidth: 944}}>
+                    <Table sx={{width: "100%"}}>
                         <TableHead
                             sx={{ background: "#1e293b",
                                 "& .MuiTableCell-root": { color: "#fff", fontSize: "16px", 
-                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+                                    borderRight: "1px solid rgba(255, 255, 255, 0.1)",
+                                    whiteSpace: "nowrap"
                                 }
                             }}
                         >
@@ -245,7 +246,8 @@ const AddCustomer = () => {
                                 background: "linear-gradient(180deg, #F9F9FB 0%, #f3f3f3ff 100%)",
                                 "& .MuiTableCell-root": { color: "#000000ff", fontSize: "15px",
                                     borderBottom: "1px solid rgba(0, 0, 0, 0.1)", letterSpacing: 0.5,
-                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)"
+                                    borderRight: "1px solid rgba(126, 126, 126, 0.1)",
+                                    whiteSpace: "nowrap"
                                 }
                             }}
                         >
