@@ -5,7 +5,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Tab
 import AddIcon from "@mui/icons-material/Add";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { addProduct, deleteProduct, loadProducts, resetDeleteState, resetUIState, setDeleteId, 
+import { addProduct, deleteProduct, resetDeleteState, resetUIState, setDeleteId, 
     setDeleteOpen, setEditId, setOpen, setProducts, updateProduct,
 } from "./productSlice";
 import { useDispatch, useSelector } from "react-redux";
@@ -38,26 +38,22 @@ const AddProduct = () => {
     const headers = { Authorization: token, "Content-Type": "application/json" };
 
     // ---------- GET ----------
-    // const fetchProducts = useCallback(() => {
-    //     axios.get("https://generateapi.techsnack.online/api/product", { 
-    //         headers: { Authorization: token, "Content-Type": "application/json" }
-    //     })
-    //     .then((getRes) => {
-    //         console.log("GET response:", getRes.data);
-    //         dispatch(setProducts(getRes.data.Data));
-    //     })
-    //     .catch((err) => {
-    //         console.error("GET error:", err);
-    //     })
-    // }, [dispatch])
+    const fetchProducts = useCallback(() => {
+        axios.get("https://generateapi.techsnack.online/api/product", { 
+            headers: { Authorization: token, "Content-Type": "application/json" }
+        })
+        .then((getRes) => {
+            console.log("GET response:", getRes.data);
+            dispatch(setProducts(getRes.data.Data));
+        })
+        .catch((err) => {
+            console.error("GET error:", err);
+        })
+    }, [dispatch])
 
-    // useEffect(() => {
-    //     if (products.length === 0) { fetchProducts() }
-    // }, [fetchProducts, products.length])
-
-     useEffect(() => {
-        dispatch(loadProducts());   // LOAD ON APP START
-    }, [dispatch]);
+    useEffect(() => {
+        if (products.length === 0) { fetchProducts() }
+    }, [fetchProducts, products.length])
 
     // ---------- Submit ----------
     const handleSubmit = (values, { resetForm }) => {
