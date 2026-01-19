@@ -21,6 +21,7 @@ import { FaOpencart } from "react-icons/fa6";
 import { MdDashboard } from "react-icons/md";
 
 import { useHistory } from "react-router-dom";
+import { useSnackbar } from "./login/snackbarContext";
 
 const drawerWidth = 240; // Width of the sidebar drawer
 
@@ -85,6 +86,16 @@ const MiniDrawer = ({ children }) => {
     // Toggle expand/collapse for specific menu
     const toggleMenu = (name) => setOpenMenu(prev => ( prev === name ? null : name ));
 
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const { showSnackbar } = useSnackbar();
+    
+    const handleLogout = () => {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("isLoggedIn");
+        history.push("/login");
+        showSnackbar("Logout successful!", "success");
+    };
+
     return (
         <Box sx={{ display: "flex" }}>
             <CssBaseline />
@@ -97,8 +108,30 @@ const MiniDrawer = ({ children }) => {
                     </Typography>
 
                     {/* LOGIN BUTTON */}
-                    <Button variant="outlined" startIcon={<LoginIcon />} onClick={() => history.push("/")}
-                            sx={{ borderColor: "#03151eff", color: "#0b2b39ff",
+                    {isLoggedIn ? (
+                        <Button
+                            variant="outlined"
+                            startIcon={<AccountCircleIcon />}
+                            onClick={handleLogout}
+                            sx={{
+                                borderColor: "#03151eff",
+                                color: "#0b2b39ff",
+                                '&:hover': {
+                                    borderColor: "#061116ff",
+                                    boxShadow: "0 0 10px rgba(7, 27, 42, 0.7)"
+                                }
+                            }}
+                        >
+                            Logout
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="outlined"
+                            startIcon={<LoginIcon />}
+                            onClick={() => history.push("/login")}
+                            sx={{
+                                borderColor: "#03151eff",
+                                color: "#0b2b39ff",
                                 '&:hover': {
                                     borderColor: "#061116ff",
                                     boxShadow: "0 0 10px rgba(7, 27, 42, 0.7)"
@@ -106,7 +139,9 @@ const MiniDrawer = ({ children }) => {
                             }}
                         >
                             Login
-                    </Button>
+                        </Button>
+                    )}
+
                 </Toolbar>
             </AppBar>
 
@@ -120,7 +155,7 @@ const MiniDrawer = ({ children }) => {
                     <Tooltip title="Dashboard" placement="right"
                         slotProps={{tooltip:{sx:{letterSpacing:2, fontSize: "12px"}}}}
                     >
-                        <ListItemButton onClick={() => {history.push("/dashboard")}}>
+                        <ListItemButton onClick={() => {history.push("/")}}>
                             <ListItemIcon sx={{fontSize: "24px"}}><MdDashboard /></ListItemIcon>
                             <ListItemText primary="Dashboard" />
                         </ListItemButton>
