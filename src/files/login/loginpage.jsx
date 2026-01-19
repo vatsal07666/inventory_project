@@ -35,14 +35,14 @@ const Login = () => {
         };
 
         // GET request
-        axios.get("https://generateapi.techsnack.online/api/login", { headers })
-        .then((getRes) => {
-            console.log("GET response:", getRes.data, getRes.status);
-        })
-        .catch((err) => {
-            console.error("GET error:", err);
-            showSnackbar("GET failed", "error");
-        });
+        // axios.get("https://generateapi.techsnack.online/api/login", { headers })
+        // .then((getRes) => {
+        //     console.log("GET response:", getRes.data, getRes.status);
+        // })
+        // .catch((err) => {
+        //     console.error("GET error:", err);
+        //     showSnackbar("GET failed", "error");
+        // });
 
         // POST request (login)
         axios.post( "https://generateapi.techsnack.online/api/login",
@@ -52,9 +52,12 @@ const Login = () => {
         .then((postRes) => {
             console.log("POST response:", postRes.data);
             if (postRes.data.Status === "Success") {
+                // STEP 5 (LOGIN) – ADD HERE
+                localStorage.setItem("isLoggedIn", "true");
+                
                 showSnackbar("Login successful!", "success");
                 resetForm();
-                history.push("/dashboard");
+                history.push("/");
             } else {
                 showSnackbar(postRes.data.message || "Login failed", "error");
             }
